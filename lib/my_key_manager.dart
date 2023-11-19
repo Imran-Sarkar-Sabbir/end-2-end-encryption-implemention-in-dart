@@ -27,7 +27,7 @@ Future<bool> identityKeySender(Map<String, dynamic> key) async {
 
 Future<bool> signedPreKeySender(Map<String, dynamic> key) async {
   try {
-    await apiPost("/signedPreKey/$myId", jsonEncode(key));
+    await apiPost("/signedPreKey/$myId", key);
     return true;
   } catch (e) {
     print(e);
@@ -37,7 +37,7 @@ Future<bool> signedPreKeySender(Map<String, dynamic> key) async {
 
 Future<bool> preKeySender(Map<String, dynamic> key) async {
   try {
-    await apiPost("/preKey/$myId", jsonEncode(key));
+    await apiPost("/preKey/$myId", key);
     return true;
   } catch (e) {
     print(e);
@@ -52,7 +52,7 @@ apiPost(String apiEndPoint, dynamic body) async {
   print(body);
   await http.post(
     Uri.http(basePath, apiEndPoint),
-    body: body,
+    body: jsonEncode(body),
     headers: {"content-type": "application/json"},
   );
 }
