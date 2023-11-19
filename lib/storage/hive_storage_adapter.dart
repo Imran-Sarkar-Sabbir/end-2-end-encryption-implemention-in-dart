@@ -14,6 +14,15 @@ class HiveAdapter implements KeyStorageAdapter {
   }
 
   @override
+  Future<Map> retriveAll({
+    required String key,
+    String? partition,
+  }) async {
+    final box = await Hive.openBox(partition ?? key);
+    return Map.fromIterables(box.keys, box.values);
+  }
+
+  @override
   Future<void> store({
     required String key,
     required value,

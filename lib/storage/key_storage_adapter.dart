@@ -8,4 +8,9 @@ abstract class KeyStorageAdapter {
   });
 
   Future<dynamic> retrive({required String key, String? partition});
+
+  Future<Map> retriveAll({
+    required String key,
+    String? partition,
+  });
 }

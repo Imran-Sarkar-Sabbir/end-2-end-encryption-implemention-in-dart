@@ -17,7 +17,7 @@ final myKeyManager = KeyManager(
 
 Future<bool> identityKeySender(Map<String, dynamic> key) async {
   try {
-    await apiPost("/identityKey/$myId", jsonEncode(key));
+    await apiPost("/identityKey/$myId", key);
     return true;
   } catch (e) {
     print(e);

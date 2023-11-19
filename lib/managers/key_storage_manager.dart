@@ -16,6 +16,11 @@ class KeyStorageManager {
     final identityKeyPair = identityStore.identityKeyPair.serialize();
     final registrationId = identityStore.localRegistrationId;
 
+    final trastedKey = {};
+    for (final key in identityStore.trustedKeys.keys) {
+      trastedKey[key.toString()] = identityStore.trustedKeys[key]?.serialize();
+    }
+
     await keyStorage.store(
       partition: _identityPartition,
       key: "identityKeyPair",
@@ -26,6 +31,12 @@ class KeyStorageManager {
       partition: _identityPartition,
       key: "registrationId",
       value: registrationId,
+    );
+
+    await keyStorage.store(
+      partition: _identityPartition,
+      key: "trastedKey",
+      value: trastedKey,
     );
   }
 
@@ -40,13 +51,36 @@ class KeyStorageManager {
       key: "registrationId",
     );
 
-    if (identityKeyPairData != null && registrationID != null) {
-      final identityKeyPair = IdentityKeyPair.fromSerialized(
-        identityKeyPairData,
-      );
-      return InMemoryIdentityKeyStore(identityKeyPair, registrationID);
+    if (identityKeyPairData == null || registrationID == null) {
+      return null;
     }
-    return null;
+
+    final identityKeyPair = IdentityKeyPair.fromSerialized(
+      identityKeyPairData,
+    );
+
+    final identityStore = InMemoryIdentityKeyStore(
+      identityKeyPair,
+      registrationID,
+    );
+
+    final trastedKey = await keyStorage.retrive(
+      partition: _identityPartition,
+      key: "trastedKey",
+    );
+
+    if (trastedKey != null) {
+      for (final key in trastedKey.keys) {
+        final temp = key.split(":");
+        final address = SignalProtocolAddress(temp[0], int.parse(temp[1]));
+        identityStore.trustedKeys[address] = IdentityKey.fromBytes(
+          trastedKey[key],
+          0,
+        );
+      }
+    }
+
+    return identityStore;
   }
 
   Future<void> storeSignedPreKey(
@@ -112,33 +146,27 @@ class KeyStorageManager {
   Future<void> storeSessions(InMemorySessionStore sessionStore) async {
     final sessions = {};
     for (final session in sessionStore.sessions.keys) {
-      sessions[session.getName()] = {
-        "deviceId": session.getDeviceId(),
-        "key": sessionStore.sessions[session],
-      };
+      await keyStorage.store(
+        key: session.toString(),
+        value: sessions,
+        partition: _sessionPartition,
+      );
     }
-    await keyStorage.store(
-      key: _sessionPartition,
-      value: sessions,
-      partition: _sessionPartition,
-    );
   }
 
   Future<InMemorySessionStore> retriveSessions() async {
     final sessionStore = InMemorySessionStore();
 
-    final sessions = await keyStorage.retrive(
+    final sessions = await keyStorage.retriveAll(
       key: _sessionPartition,
       partition: _sessionPartition,
     );
 
-    if (sessions != null) {
+    if (sessions.isNotEmpty) {
       for (final sessionId in sessions.keys) {
-        final userSession = SignalProtocolAddress(
-          sessionId,
-          sessions[sessionId]["deviceId"],
-        );
-        sessionStore.sessions[userSession] = sessions[sessionId]['key'];
+        final temp = sessionId.split(":");
+        final address = SignalProtocolAddress(temp[0], int.parse(temp[1]));
+        sessionStore.sessions[address] = sessions[sessionId];
       }
     }
 

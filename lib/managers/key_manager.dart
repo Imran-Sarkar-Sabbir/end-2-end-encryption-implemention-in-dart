@@ -108,7 +108,7 @@ class KeyManager {
       final preKeys = generatePreKeys(start, _preKeysCount);
       final keyMap = <String, dynamic>{};
       for (final p in preKeys) {
-        keyMap["${p.id}"] = p.serialize();
+        keyMap["${p.id}"] = p.getKeyPair().publicKey.serialize();
       }
       final hasSend = await preKeySender(keyMap);
       if (hasSend) {
@@ -123,5 +123,17 @@ class KeyManager {
       print(e);
       return false;
     }
+  }
+
+  storeIdentity() {
+    keyStorageManager.storeIdentityKey(identityStore!);
+  }
+
+  saveSession() {
+    keyStorageManager.storeSessions(sessionStore!);
+  }
+
+  hasSessionWith({required SignalProtocolAddress user}) {
+    return sessionStore?.containsSession(user) ?? false;
   }
 }
