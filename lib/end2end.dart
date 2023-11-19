@@ -21,10 +21,10 @@ fetchMessages() async {
     final messages = data[userId];
     for (String msg in messages) {
       final cipherMsg = Uint8List.fromList(msg.codeUnits);
-      final ciphertext = SignalMessage.fromSerialized(cipherMsg);
+      final ciphertext = PreKeySignalMessage(cipherMsg);
       if (ciphertext.getType() == CiphertextMessage.prekeyType) {
         final plainText = await sessionCipher.decrypt(
-          ciphertext as PreKeySignalMessage,
+          ciphertext,
         );
         print(plainText);
       }

@@ -4,7 +4,7 @@ import 'dart:math';
 import 'package:end2end/managers/key_manager.dart';
 import 'package:http/http.dart' as http;
 
-const bool isMyUser = true;
+const bool isMyUser = false;
 
 const myId = isMyUser ? "userA" : "userB";
 const otherId = !isMyUser ? "userA" : "userB";

@@ -4,7 +4,7 @@ import 'package:libsignal_protocol_dart/libsignal_protocol_dart.dart';
 typedef KeySender = Future<bool> Function(Map<String, dynamic>);
 
 class KeyManager {
-  static const _preKeysCount = 5;
+  static const _preKeysCount = 110;
   final keyStorageManager = KeyStorageManager();
   InMemorySignedPreKeyStore? signedPreKeyStore;
   InMemoryIdentityKeyStore? identityStore;

@@ -129,17 +129,22 @@ createSession(
     remoteSignedPreKey,
   );
 
-  for (var i = 0; i < 10; i++) {
+  for (var i = 0; i < 5; i++) {
     // showSessions(sessionStore);
     final ciphertext = await sessionCipher.encrypt(
       Uint8List.fromList(utf8.encode('Hello $userId')),
     );
+
     if (ciphertext.getType() == CiphertextMessage.prekeyType) {
+      final serialized = ciphertext.serialize();
+
+      final msg = PreKeySignalMessage(serialized);
+
       final plaintext = await remoteSessionCipher.decrypt(
-        ciphertext as PreKeySignalMessage,
+        msg,
       );
-      // print("Decrypted text : $i");
-      // print(utf8.decode(plaintext));
+      print("Decrypted text : $i");
+      print(utf8.decode(plaintext));
     }
   }
 
