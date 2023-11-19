@@ -17,6 +17,7 @@ fetchMessages() async {
 sendMessages() async {
   final response = await apiPost("/messages/$otherId", {
     "msg": "this is my message",
+    "from": myId,
   });
   print(response);
 }

@@ -61,7 +61,9 @@ apiGet(
   String apiEndPoint,
 ) async {
   print("get: $basePath$apiEndPoint");
-  await http.get(
+  final response = await http.get(
     Uri.http(basePath, apiEndPoint),
   );
+
+  return response.body;
 }
