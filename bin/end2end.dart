@@ -6,6 +6,7 @@ import 'package:libsignal_protocol_dart/libsignal_protocol_dart.dart';
 Future<void> main(List<String> arguments) async {
   installE2EE();
   return;
+
   final [
     sessionStore,
     preKeyStore,
