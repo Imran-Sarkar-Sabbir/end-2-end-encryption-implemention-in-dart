@@ -5,8 +5,8 @@ import 'package:libsignal_protocol_dart/libsignal_protocol_dart.dart';
 import "package:libsignal_protocol_dart/src/ecc/curve.dart";
 
 Future<void> main(List<String> arguments) async {
-  // installE2EE();
-  // return;
+  installE2EE();
+  return;
 
   final [
     sessionStore,
