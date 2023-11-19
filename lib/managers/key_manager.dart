@@ -4,7 +4,7 @@ import 'package:libsignal_protocol_dart/libsignal_protocol_dart.dart';
 typedef KeySender = Future<bool> Function(Map<String, dynamic>);
 
 class KeyManager {
-  static const _preKeysCount = 110;
+  static const _preKeysCount = 5;
   final keyStorageManager = KeyStorageManager();
   InMemorySignedPreKeyStore? signedPreKeyStore;
   InMemoryIdentityKeyStore? identityStore;
@@ -28,17 +28,23 @@ class KeyManager {
   Future<void> install() async {
     identityStore = await keyStorageManager.retriveIdentityKey();
     if (identityStore == null) {
-      await generateIdentityKey();
+      if (!await generateIdentityKey()) {
+        throw Exception("Error saving identity key");
+      }
     }
     signedPreKeyStore = await keyStorageManager.retriveSignedPreKey();
     if (signedPreKeyStore == null) {
-      await genSignedPreKey();
+      if (!await genSignedPreKey()) {
+        throw Exception("Error saving signed pre key");
+      }
     }
-    await managePreKey();
+    if (!await managePreKey()) {
+      throw Exception("Error saving signed pre key");
+    }
     sessionStore = await keyStorageManager.retriveSessions();
   }
 
-  Future<void> generateIdentityKey() async {
+  Future<bool> generateIdentityKey() async {
     try {
       final identityKeyPair = generateIdentityKeyPair();
       final registrationId = generateRegistrationId(false);
@@ -53,13 +59,15 @@ class KeyManager {
         );
         await keyStorageManager.storeIdentityKey(identityStore!);
       }
+      return hasSaved;
     } catch (e) {
       print("error generating identity key");
       print(e);
+      return false;
     }
   }
 
-  Future<void> genSignedPreKey() async {
+  Future<bool> genSignedPreKey() async {
     try {
       final signedPreKey = generateSignedPreKey(
         identityStore!.identityKeyPair,
@@ -78,20 +86,23 @@ class KeyManager {
         );
         await keyStorageManager.storeSignedPreKey(signedPreKeyStore!);
       }
+      return hasSend;
     } catch (e) {
       print("error on sending signed pre key");
       print(e);
+      return false;
     }
   }
 
-  Future<void> managePreKey() async {
+  Future<bool> managePreKey() async {
     preKeyStore = await keyStorageManager.retrivePreKey();
     if (preKeyStore == null) {
-      await genPreKeys(0);
+      return genPreKeys(0);
     }
+    return true;
   }
 
-  Future<void> genPreKeys(int start) async {
+  Future<bool> genPreKeys(int start) async {
     try {
       preKeyStore = InMemoryPreKeyStore();
       final preKeys = generatePreKeys(start, _preKeysCount);
@@ -106,9 +117,11 @@ class KeyManager {
         }
         await keyStorageManager.storePreKeys(preKeyStore!);
       }
+      return hasSend;
     } catch (e) {
       print("error on sending pre key");
       print(e);
+      return false;
     }
   }
 }

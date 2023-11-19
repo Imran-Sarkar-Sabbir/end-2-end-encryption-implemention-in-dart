@@ -120,12 +120,11 @@ createSession(
     );
 
     if (ciphertext.getType() == CiphertextMessage.prekeyType) {
-      await remoteSessionCipher
-          .decryptWithCallback(ciphertext as PreKeySignalMessage, (plaintext) {
-        // ignore: avoid_print
-        print("Decrypted text : $i");
-        print(utf8.decode(plaintext));
-      });
+      final plaintext = await remoteSessionCipher.decrypt(
+        ciphertext as PreKeySignalMessage,
+      );
+      print("Decrypted text : $i");
+      print(utf8.decode(plaintext));
     }
   }
 }
@@ -149,8 +148,10 @@ install() async {
   final sessionStore = InMemorySessionStore();
   final preKeyStore = InMemoryPreKeyStore();
   final signedPreKeyStore = InMemorySignedPreKeyStore();
-  final identityStore =
-      InMemoryIdentityKeyStore(identityKeyPair, registrationId);
+  final identityStore = InMemoryIdentityKeyStore(
+    identityKeyPair,
+    registrationId,
+  );
 
   for (final p in preKeys) {
     await preKeyStore.storePreKey(p.id, p);

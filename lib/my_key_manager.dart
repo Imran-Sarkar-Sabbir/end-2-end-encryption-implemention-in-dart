@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 const bool isMyUser = true;
 
 const myId = isMyUser ? "userA" : "userB";
-const therId = !isMyUser ? "userA" : "userB";
+const otherId = !isMyUser ? "userA" : "userB";
 
 final myKeyManager = KeyManager(
   identityKeySender: identityKeySender,
