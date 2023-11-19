@@ -44,14 +44,14 @@ Future<SessionCipher?> getSessionCipher(String userId) async {
       print(remoteUserKeys);
 
       final retrievedPreKey = PreKeyBundle(
-        remoteUserKeys["registrationId"],
+        int.parse(remoteUserKeys["registrationId"]),
         0,
         int.parse(remoteUserKeys["preKeyId"]),
         Curve.decodePoint(
           Uint8List.fromList(remoteUserKeys["preKey"]),
           0,
         ),
-        remoteUserKeys["signedPreKeyId"],
+        int.parse(remoteUserKeys["signedPreKeyId"]),
         Curve.decodePoint(
           Uint8List.fromList(remoteUserKeys["signedPreKeyPublic"]),
           0,
@@ -59,6 +59,9 @@ Future<SessionCipher?> getSessionCipher(String userId) async {
         remoteUserKeys["signedPreKeySignature"],
         IdentityKey.fromBytes(remoteUserKeys["identityPublic"], 0),
       );
+
+      print("retrievedPreKey");
+      print(retrievedPreKey);
 
       final sessionBuilder = SessionBuilder(
         myKeyManager.sessionStore!,
@@ -70,8 +73,9 @@ Future<SessionCipher?> getSessionCipher(String userId) async {
       await sessionBuilder.processPreKeyBundle(retrievedPreKey);
       await myKeyManager.saveSession();
       await myKeyManager.storeIdentity();
-    } catch (e) {
+    } on Error catch (e) {
       print(e);
+      print(e.stackTrace);
       print("error getring usres key");
       return null;
     }

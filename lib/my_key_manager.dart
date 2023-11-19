@@ -64,6 +64,6 @@ apiGet(
   final response = await http.get(
     Uri.http(basePath, apiEndPoint),
   );
-
+  if (response.statusCode >= 400) throw Exception("API error: ");
   return response.body;
 }
