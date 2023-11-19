@@ -42,22 +42,25 @@ Future<SessionCipher?> getSessionCipher(String userId) async {
       final remoteUserKeys = await apiGet('/key/$otherId');
       print("remoteUserKeys");
       print(remoteUserKeys);
+      final data = jsonDecode(remoteUserKeys);
 
+      print(data["registrationId"]);
+      print(data["registrationId"].runtimeType);
       final retrievedPreKey = PreKeyBundle(
-        int.parse(remoteUserKeys["registrationId"]),
+        data["registrationId"],
         0,
-        int.parse(remoteUserKeys["preKeyId"]),
+        int.parse(data["preKeyId"]),
         Curve.decodePoint(
-          Uint8List.fromList(remoteUserKeys["preKey"]),
+          parse(data["preKey"]),
           0,
         ),
-        int.parse(remoteUserKeys["signedPreKeyId"]),
+        data["signedPreKeyId"],
         Curve.decodePoint(
-          Uint8List.fromList(remoteUserKeys["signedPreKeyPublic"]),
+          parse(data["signedPreKeyPublic"]),
           0,
         ),
-        remoteUserKeys["signedPreKeySignature"],
-        IdentityKey.fromBytes(remoteUserKeys["identityPublic"], 0),
+        parse(data["signedPreKeySignature"]),
+        IdentityKey.fromBytes(parse(data["identityPublic"]), 0),
       );
 
       print("retrievedPreKey");
@@ -88,6 +91,14 @@ Future<SessionCipher?> getSessionCipher(String userId) async {
     myKeyManager.identityStore!,
     address,
   );
+}
+
+Uint8List parse(List<dynamic> ll) {
+  Uint8List l = Uint8List(ll.length);
+  for (var i = 0; i < ll.length; i++) {
+    l[i] = ll[i];
+  }
+  return l;
 }
 
 sendMessages() async {
