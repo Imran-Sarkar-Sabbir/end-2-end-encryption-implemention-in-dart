@@ -35,9 +35,9 @@ fetchMessages() async {
 
 Future<SessionCipher?> getSessionCipher(String userId) async {
   final address = SignalProtocolAddress(userId, 0);
-  bool hasSession = myKeyManager.hasSessionWith(user: address);
+  bool hasSession = await myKeyManager.hasSessionWith(user: address);
 
-  if (hasSession) {
+  if (!hasSession) {
     try {
       final remoteUserKeys = await apiGet('/key/$otherId');
       print("remoteUserKeys");
@@ -89,6 +89,8 @@ Future<SessionCipher?> getSessionCipher(String userId) async {
 sendMessages() async {
   final sessionCipher = await getSessionCipher(otherId);
 
+  print("sessionCipher");
+  print(sessionCipher);
   if (sessionCipher == null) {
     return;
   }
