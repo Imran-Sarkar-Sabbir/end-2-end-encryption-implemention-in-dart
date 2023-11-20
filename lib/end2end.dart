@@ -22,6 +22,8 @@ fetchMessages() async {
     final messages = data[userId];
     for (final msg in messages) {
       // final cipherMsg = Uint8List.fromList(msg.codeUnits);
+      print("msg");
+      print(msg);
       final ciphertext = PreKeySignalMessage(parse(msg));
       final plainText = await sessionCipher.decrypt(
         ciphertext,
