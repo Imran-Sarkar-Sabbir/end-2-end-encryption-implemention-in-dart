@@ -20,9 +20,9 @@ fetchMessages() async {
     final sessionCipher = await getSessionCipher(userId);
     if (sessionCipher == null) continue;
     final messages = data[userId];
-    for (String msg in messages) {
-      final cipherMsg = Uint8List.fromList(msg.codeUnits);
-      final ciphertext = PreKeySignalMessage(cipherMsg);
+    for (final msg in messages) {
+      // final cipherMsg = Uint8List.fromList(msg.codeUnits);
+      final ciphertext = PreKeySignalMessage(msg);
       final plainText = await sessionCipher.decrypt(
         ciphertext,
       );
@@ -114,35 +114,8 @@ sendMessages() async {
   );
 
   await myKeyManager.saveSession();
-  final response = await apiPost("/messages/$otherId", {
-    "msg": String.fromCharCodes((cipherMsg as PreKeySignalMessage).serialize()),
+  await apiPost("/messages/$otherId", {
+    "msg": cipherMsg.serialize(),
     "from": myId,
   });
-  print(response);
 }
-
-// void sendKeysToRemote() {
-//   final preKeyId = 0;
-//   final preKey = PreKeyRecord.fromBuffer(
-//     myKeyManager.preKeyStore!.store[preKeyId]!,
-//   );
-
-//   final signPreKeyId = myKeyManager.signedPreKeyStore!.store.keys.first;
-//   final signPreKey = SignedPreKeyRecord.fromSerialized(
-//     myKeyManager.signedPreKeyStore!.store[signPreKeyId]!,
-//   );
-
-//   final myGeneratedKey = {
-//     "remoteRegId": myKeyManager.identityStore!.localRegistrationId,
-//     "deviceId": 1,
-//     "preKeyId": preKeyId,
-//     "preKeyPublic": preKey.getKeyPair().publicKey.serialize(),
-//     "signedPreKeyId": signPreKeyId,
-//     "signedPreKeyPublic": signPreKey.getKeyPair().publicKey.serialize(),
-//     "signPreSignature": signPreKey.signature,
-//     "identityPublic":
-//         myKeyManager.identityStore!.identityKeyPair.getPublicKey().serialize(),
-//   };
-
-//   print(myGeneratedKey);
-// }
