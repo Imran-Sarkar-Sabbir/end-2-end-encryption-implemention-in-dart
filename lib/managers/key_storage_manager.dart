@@ -148,7 +148,7 @@ class KeyStorageManager {
     for (final session in sessionStore.sessions.keys) {
       await keyStorage.store(
         key: session.toString(),
-        value: sessions,
+        value: sessionStore.sessions[sessions],
         partition: _sessionPartition,
       );
     }
@@ -163,6 +163,8 @@ class KeyStorageManager {
     );
 
     if (sessions.isNotEmpty) {
+      print("sessions");
+      print(sessions);
       for (final sessionId in sessions.keys) {
         final temp = sessionId.split(":");
         final address = SignalProtocolAddress(temp[0], int.parse(temp[1]));

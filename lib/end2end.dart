@@ -14,6 +14,7 @@ Future<void> installE2EE() async {
 
 fetchMessages() async {
   final response = await apiGet("/messages/$myId");
+  print(response);
   final data = jsonDecode(response);
   for (final userId in data.keys) {
     final sessionCipher = await getSessionCipher(userId);
