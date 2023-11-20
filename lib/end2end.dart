@@ -41,14 +41,14 @@ fetchMessages() async {
           final plainText = await sessionCipher.decryptFromSignal(
             ciphertext,
           );
-          print(utf8.decode(plainText));
+          print("message : ${utf8.decode(plainText)}");
         } catch (e) {
           // print("PreKeySignalMessage");
           final ciphertext = PreKeySignalMessage(parseBytes(cypher));
           final plainText = await sessionCipher.decrypt(
             ciphertext,
           );
-          print(utf8.decode(plainText));
+          print("message : ${utf8.decode(plainText)}");
         }
       } on Error catch (e) {
         print(e);
