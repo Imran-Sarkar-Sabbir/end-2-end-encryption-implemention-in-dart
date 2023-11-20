@@ -23,12 +23,14 @@ fetchMessages() async {
     for (final msg in messages) {
       try {
         try {
+          print("SignalMessage");
           final ciphertext = SignalMessage.fromSerialized(parseBytes(msg));
           final plainText = await sessionCipher.decryptFromSignal(
             ciphertext,
           );
           print(utf8.decode(plainText));
         } catch (e) {
+          print("PreKeySignalMessage");
           final ciphertext = PreKeySignalMessage(parseBytes(msg));
           final plainText = await sessionCipher.decrypt(
             ciphertext,
