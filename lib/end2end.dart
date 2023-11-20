@@ -22,12 +22,10 @@ fetchMessages() async {
     for (String msg in messages) {
       final cipherMsg = Uint8List.fromList(msg.codeUnits);
       final ciphertext = PreKeySignalMessage(cipherMsg);
-      if (ciphertext.getType() == CiphertextMessage.prekeyType) {
-        final plainText = await sessionCipher.decrypt(
-          ciphertext,
-        );
-        print(plainText);
-      }
+      final plainText = await sessionCipher.decrypt(
+        ciphertext,
+      );
+      print(plainText);
     }
     await myKeyManager.saveSession();
   }
