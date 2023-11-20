@@ -48,7 +48,6 @@ const basePath = "localhost:12345";
 
 apiPost(String apiEndPoint, dynamic body) async {
   print("post: $basePath$apiEndPoint");
-  print(body);
   await http.post(
     Uri.http(basePath, apiEndPoint),
     body: jsonEncode(body),
