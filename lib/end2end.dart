@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:end2end/my_key_manager.dart';
@@ -9,7 +10,14 @@ Future<void> installE2EE() async {
   await myKeyManager.install();
 
   await fetchMessages();
-  await sendMessages();
+  String? message;
+  do {
+    print("Write a message");
+    message = stdin.readLineSync();
+    if (message != null && message.isNotEmpty && message != "q") {
+      await sendMessages(message);
+    }
+  } while (message != null && message.isNotEmpty && message != "q");
 }
 
 fetchMessages() async {
@@ -24,14 +32,14 @@ fetchMessages() async {
       try {
         final cypher = msg.codeUnits;
         try {
-          print("SignalMessage");
+          // print("SignalMessage");
           final ciphertext = SignalMessage.fromSerialized(parseBytes(cypher));
           final plainText = await sessionCipher.decryptFromSignal(
             ciphertext,
           );
           print(utf8.decode(plainText));
         } catch (e) {
-          print("PreKeySignalMessage");
+          // print("PreKeySignalMessage");
           final ciphertext = PreKeySignalMessage(parseBytes(cypher));
           final plainText = await sessionCipher.decrypt(
             ciphertext,
@@ -109,7 +117,7 @@ Uint8List parseBytes(List<dynamic> ll) {
   return l;
 }
 
-sendMessages() async {
+sendMessages(String message) async {
   final sessionCipher = await getSessionCipher(otherId);
   if (sessionCipher == null) {
     return;
@@ -117,7 +125,7 @@ sendMessages() async {
 
   try {
     final cipherMsg = await sessionCipher.encrypt(
-      Uint8List.fromList(utf8.encode("this is my encrypted message")),
+      Uint8List.fromList(utf8.encode(message)),
     );
 
     await myKeyManager.saveSession();
