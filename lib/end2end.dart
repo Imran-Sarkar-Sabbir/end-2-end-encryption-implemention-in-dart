@@ -110,13 +110,18 @@ sendMessages() async {
     return;
   }
 
-  final cipherMsg = await sessionCipher.encrypt(
-    Uint8List.fromList(utf8.encode("this is my encrypted message")),
-  );
+  try {
+    final cipherMsg = await sessionCipher.encrypt(
+      Uint8List.fromList(utf8.encode("this is my encrypted message")),
+    );
 
-  await myKeyManager.saveSession();
-  await apiPost("/messages/$otherId", {
-    "msg": cipherMsg.serialize(),
-    "from": myId,
-  });
+    await myKeyManager.saveSession();
+    await apiPost("/messages/$otherId", {
+      "msg": cipherMsg.serialize(),
+      "from": myId,
+    });
+  } catch (e) {
+    print(e);
+    print("error on encrypting message or sending");
+  }
 }
