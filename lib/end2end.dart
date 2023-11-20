@@ -21,14 +21,20 @@ fetchMessages() async {
     if (sessionCipher == null) continue;
     final messages = data[userId];
     for (final msg in messages) {
-      // final cipherMsg = Uint8List.fromList(msg.codeUnits);
-      print("msg");
-      print(msg);
-      final ciphertext = PreKeySignalMessage(parse(msg));
-      final plainText = await sessionCipher.decrypt(
-        ciphertext,
-      );
-      print(plainText);
+      try {
+        // final cipherMsg = Uint8List.fromList(msg.codeUnits);
+        print("msg");
+        print(msg);
+        final ciphertext = PreKeySignalMessage(parse(msg));
+        final plainText = await sessionCipher.decrypt(
+          ciphertext,
+        );
+        print(plainText);
+        print(utf8.decode(plainText));
+      } catch (e) {
+        print(e);
+        print("error decrypting message");
+      }
     }
     await myKeyManager.saveSession();
   }
