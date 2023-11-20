@@ -18,13 +18,10 @@ fetchMessages() async {
   final data = jsonDecode(response);
   for (final userId in data.keys) {
     final sessionCipher = await getSessionCipher(userId);
-
     if (sessionCipher == null) continue;
     final messages = data[userId];
     for (final msg in messages) {
       try {
-        print("msg");
-        print(msg);
         final ciphertext = SignalMessage.fromSerialized(parseBytes(msg));
         final plainText = await sessionCipher.decryptFromSignal(
           ciphertext,
@@ -103,9 +100,6 @@ Uint8List parseBytes(List<dynamic> ll) {
 
 sendMessages() async {
   final sessionCipher = await getSessionCipher(otherId);
-
-  print("sessionCipher");
-  print(sessionCipher);
   if (sessionCipher == null) {
     return;
   }
