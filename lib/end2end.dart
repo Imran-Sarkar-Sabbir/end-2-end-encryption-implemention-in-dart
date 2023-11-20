@@ -16,7 +16,7 @@ Future<void> installE2EE() async {
     message = stdin.readLineSync();
     if (message != null && message.isNotEmpty && message != "q") {
       if (message == "r") {
-        fetchMessages();
+        await fetchMessages();
       } else {
         await sendMessages(message);
       }
