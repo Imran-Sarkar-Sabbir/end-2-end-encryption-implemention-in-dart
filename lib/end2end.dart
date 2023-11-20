@@ -14,12 +14,11 @@ Future<void> installE2EE() async {
 
 fetchMessages() async {
   final response = await apiGet("/messages/$myId");
-  print(response);
+
   final data = jsonDecode(response);
   for (final userId in data.keys) {
     final sessionCipher = await getSessionCipher(userId);
-    print("sessionCipher");
-    print(sessionCipher);
+
     if (sessionCipher == null) continue;
     final messages = data[userId];
     for (final msg in messages) {
@@ -28,7 +27,6 @@ fetchMessages() async {
         final plainText = await sessionCipher.decrypt(
           ciphertext,
         );
-        print(plainText);
         print(utf8.decode(plainText));
       } catch (e) {
         print(e);
@@ -48,12 +46,8 @@ Future<SessionCipher?> getSessionCipher(String userId) async {
   if (!hasSession) {
     try {
       final remoteUserKeys = await apiGet('/key/$otherId');
-      print("remoteUserKeys");
-      print(remoteUserKeys);
-      final data = jsonDecode(remoteUserKeys);
 
-      print(data["registrationId"]);
-      print(data["registrationId"].runtimeType);
+      final data = jsonDecode(remoteUserKeys);
       final retrievedPreKey = PreKeyBundle(
         data["registrationId"],
         0,
@@ -70,9 +64,6 @@ Future<SessionCipher?> getSessionCipher(String userId) async {
         parseBytes(data["signedPreKeySignature"]),
         IdentityKey.fromBytes(parseBytes(data["identityPublic"]), 0),
       );
-
-      print("retrievedPreKey");
-      print(retrievedPreKey);
 
       final sessionBuilder = SessionBuilder(
         myKeyManager.sessionStore!,
