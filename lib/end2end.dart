@@ -115,7 +115,7 @@ sendMessages() async {
 
   await myKeyManager.saveSession();
   final response = await apiPost("/messages/$otherId", {
-    "msg": String.fromCharCodes(cipherMsg.serialize()),
+    "msg": String.fromCharCodes((cipherMsg as PreKeySignalMessage).serialize()),
     "from": myId,
   });
   print(response);

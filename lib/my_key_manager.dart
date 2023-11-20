@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:end2end/managers/key_manager.dart';
 import 'package:http/http.dart' as http;
 
-const bool isMyUser = false;
+const bool isMyUser = true;
 
 const myId = isMyUser ? "userA" : "userB";
 const otherId = !isMyUser ? "userA" : "userB";
