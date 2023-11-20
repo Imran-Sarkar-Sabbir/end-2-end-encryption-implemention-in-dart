@@ -60,11 +60,11 @@ printString(Uint8List codedString) {
 createSession(
   String userId,
   InMemorySessionStore sessionStore,
-  preKeyStore,
-  signedPreKeyStore,
+  InMemoryPreKeyStore preKeyStore,
+  InMemorySignedPreKeyStore signedPreKeyStore,
   InMemoryIdentityKeyStore identityStore,
 ) async {
-  final bobAddress = SignalProtocolAddress(userId, 1);
+  final bobAddress = SignalProtocolAddress(userId, 0);
 
   final sessionBuilder = SessionBuilder(
     sessionStore,
@@ -79,28 +79,19 @@ createSession(
   final remotePreKeys = generatePreKeys(0, 110);
   final remoteSignedPreKey = generateSignedPreKey(remoteIdentityKeyPair, 0);
 
-  final preKey = remotePreKeys[0].getKeyPair();
-
-  print("===============================");
-  printString(preKey.publicKey.serialize());
-  printString(
-      Curve.decodePoint(Uint8List.fromList(preKey.publicKey.serialize()), 0)
-          .serialize());
-  print("===============================");
   final retrievedPreKey = PreKeyBundle(
     remoteRegId,
-    1,
-    remotePreKeys[2].id,
-    remotePreKeys[2].getKeyPair().publicKey,
+    0,
+    remotePreKeys[0].id,
+    remotePreKeys[0].getKeyPair().publicKey,
     remoteSignedPreKey.id,
     remoteSignedPreKey.getKeyPair().publicKey,
     remoteSignedPreKey.signature,
     remoteIdentityKeyPair.getPublicKey(),
   );
 
-  showSessions(sessionStore);
+  // showSessions(sessionStore);
   await sessionBuilder.processPreKeyBundle(retrievedPreKey);
-
   final sessionCipher = SessionCipher(
     sessionStore,
     preKeyStore,
@@ -108,17 +99,13 @@ createSession(
     identityStore,
     bobAddress,
   );
+
   final signalProtocolStore = InMemorySignalProtocolStore(
     remoteIdentityKeyPair,
     311,
   );
 
-  const aliceAddress = SignalProtocolAddress('alice', 2);
-
-  final remoteSessionCipher = SessionCipher.fromStore(
-    signalProtocolStore,
-    aliceAddress,
-  );
+  const aliceAddress = SignalProtocolAddress('alice', 0);
 
   for (final p in remotePreKeys) {
     await signalProtocolStore.storePreKey(p.id, p);
@@ -129,10 +116,48 @@ createSession(
     remoteSignedPreKey,
   );
 
+  final remoteSessionBuilder = SessionBuilder(
+    signalProtocolStore,
+    signalProtocolStore,
+    signalProtocolStore,
+    signalProtocolStore,
+    bobAddress,
+  );
+
+  final signedPreKey = await signedPreKeyStore.loadSignedPreKey(
+    signedPreKeyStore.store.keys.first,
+  );
+
+  final remoteRetrievedPreKey = PreKeyBundle(
+    await identityStore.getLocalRegistrationId(),
+    0,
+    0,
+    PreKeyRecord.fromBuffer(preKeyStore.store[0]!).getKeyPair().publicKey,
+    signedPreKey.id,
+    signedPreKey.getKeyPair().publicKey,
+    signedPreKey.signature,
+    identityStore.identityKeyPair.getPublicKey(),
+  );
+
+  await remoteSessionBuilder.processPreKeyBundle(remoteRetrievedPreKey);
+
+  final remoteSessionCipher = SessionCipher(
+    signalProtocolStore,
+    signalProtocolStore,
+    signalProtocolStore,
+    signalProtocolStore,
+    aliceAddress,
+  );
   for (var i = 0; i < 5; i++) {
     // showSessions(sessionStore);
+
+    print(i);
+
     final ciphertext = await sessionCipher.encrypt(
       Uint8List.fromList(utf8.encode('Hello $userId')),
+    );
+    final ciphertext2 = await remoteSessionCipher.encrypt(
+      Uint8List.fromList(utf8.encode('Hello form remote')),
     );
 
     if (ciphertext.getType() == CiphertextMessage.prekeyType) {
@@ -143,8 +168,13 @@ createSession(
       final plaintext = await remoteSessionCipher.decrypt(
         msg,
       );
+
+      final plaintext2 = await sessionCipher.decrypt(
+        ciphertext2 as PreKeySignalMessage,
+      );
       print("Decrypted text : $i");
       print(utf8.decode(plaintext));
+      print(utf8.decode(plaintext2));
     }
   }
 

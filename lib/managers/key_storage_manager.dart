@@ -144,11 +144,10 @@ class KeyStorageManager {
   }
 
   Future<void> storeSessions(InMemorySessionStore sessionStore) async {
-    final sessions = {};
     for (final session in sessionStore.sessions.keys) {
       await keyStorage.store(
         key: session.toString(),
-        value: sessionStore.sessions[sessions],
+        value: sessionStore.sessions[session],
         partition: _sessionPartition,
       );
     }

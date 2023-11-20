@@ -129,8 +129,8 @@ class KeyManager {
     keyStorageManager.storeIdentityKey(identityStore!);
   }
 
-  saveSession() {
-    keyStorageManager.storeSessions(sessionStore!);
+  saveSession() async {
+    await keyStorageManager.storeSessions(sessionStore!);
   }
 
   hasSessionWith({required SignalProtocolAddress user}) {

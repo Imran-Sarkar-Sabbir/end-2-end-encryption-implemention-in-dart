@@ -18,14 +18,13 @@ fetchMessages() async {
   final data = jsonDecode(response);
   for (final userId in data.keys) {
     final sessionCipher = await getSessionCipher(userId);
+    print("sessionCipher");
+    print(sessionCipher);
     if (sessionCipher == null) continue;
     final messages = data[userId];
     for (final msg in messages) {
       try {
-        // final cipherMsg = Uint8List.fromList(msg.codeUnits);
-        print("msg");
-        print(msg);
-        final ciphertext = PreKeySignalMessage(parse(msg));
+        final ciphertext = PreKeySignalMessage(parseBytes(msg));
         final plainText = await sessionCipher.decrypt(
           ciphertext,
         );
@@ -42,6 +41,8 @@ fetchMessages() async {
 
 Future<SessionCipher?> getSessionCipher(String userId) async {
   final address = SignalProtocolAddress(userId, 0);
+  print("myKeyManager.sessionStore?.sessions");
+  print(myKeyManager.sessionStore?.sessions);
   bool hasSession = await myKeyManager.hasSessionWith(user: address);
 
   if (!hasSession) {
@@ -58,16 +59,16 @@ Future<SessionCipher?> getSessionCipher(String userId) async {
         0,
         int.parse(data["preKeyId"]),
         Curve.decodePoint(
-          parse(data["preKey"]),
+          parseBytes(data["preKey"]),
           0,
         ),
         data["signedPreKeyId"],
         Curve.decodePoint(
-          parse(data["signedPreKeyPublic"]),
+          parseBytes(data["signedPreKeyPublic"]),
           0,
         ),
-        parse(data["signedPreKeySignature"]),
-        IdentityKey.fromBytes(parse(data["identityPublic"]), 0),
+        parseBytes(data["signedPreKeySignature"]),
+        IdentityKey.fromBytes(parseBytes(data["identityPublic"]), 0),
       );
 
       print("retrievedPreKey");
@@ -100,7 +101,7 @@ Future<SessionCipher?> getSessionCipher(String userId) async {
   );
 }
 
-Uint8List parse(List<dynamic> ll) {
+Uint8List parseBytes(List<dynamic> ll) {
   Uint8List l = Uint8List(ll.length);
   for (var i = 0; i < ll.length; i++) {
     l[i] = ll[i];
