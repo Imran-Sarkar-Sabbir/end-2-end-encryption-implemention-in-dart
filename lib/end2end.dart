@@ -20,18 +20,19 @@ fetchMessages() async {
     final sessionCipher = await getSessionCipher(userId);
     if (sessionCipher == null) continue;
     final messages = data[userId];
-    for (final msg in messages) {
+    for (String msg in messages) {
       try {
+        final cypher = msg.codeUnits;
         try {
           print("SignalMessage");
-          final ciphertext = SignalMessage.fromSerialized(parseBytes(msg));
+          final ciphertext = SignalMessage.fromSerialized(parseBytes(cypher));
           final plainText = await sessionCipher.decryptFromSignal(
             ciphertext,
           );
           print(utf8.decode(plainText));
         } catch (e) {
           print("PreKeySignalMessage");
-          final ciphertext = PreKeySignalMessage(parseBytes(msg));
+          final ciphertext = PreKeySignalMessage(parseBytes(cypher));
           final plainText = await sessionCipher.decrypt(
             ciphertext,
           );
@@ -121,7 +122,7 @@ sendMessages() async {
 
     await myKeyManager.saveSession();
     await apiPost("/messages/$otherId", {
-      "msg": cipherMsg.serialize(),
+      "msg": String.fromCharCodes(cipherMsg.serialize()),
       "from": myId,
     });
   } catch (e) {
