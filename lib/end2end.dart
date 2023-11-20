@@ -39,8 +39,6 @@ fetchMessages() async {
 
 Future<SessionCipher?> getSessionCipher(String userId) async {
   final address = SignalProtocolAddress(userId, 0);
-  print("myKeyManager.sessionStore?.sessions");
-  print(myKeyManager.sessionStore?.sessions);
   bool hasSession = await myKeyManager.hasSessionWith(user: address);
 
   if (!hasSession) {
