@@ -22,11 +22,19 @@ fetchMessages() async {
     final messages = data[userId];
     for (final msg in messages) {
       try {
-        final ciphertext = SignalMessage.fromSerialized(parseBytes(msg));
-        final plainText = await sessionCipher.decryptFromSignal(
-          ciphertext,
-        );
-        print(utf8.decode(plainText));
+        try {
+          final ciphertext = SignalMessage.fromSerialized(parseBytes(msg));
+          final plainText = await sessionCipher.decryptFromSignal(
+            ciphertext,
+          );
+          print(utf8.decode(plainText));
+        } catch (e) {
+          final ciphertext = PreKeySignalMessage(parseBytes(msg));
+          final plainText = await sessionCipher.decrypt(
+            ciphertext,
+          );
+          print(utf8.decode(plainText));
+        }
       } on Error catch (e) {
         print(e);
         print(e.stackTrace);
