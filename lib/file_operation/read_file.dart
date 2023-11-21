@@ -1,10 +1,11 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:pointycastle/api.dart';
-import 'package:pointycastle/export.dart';
+import 'package:end2end/file_operation/cbc_file_crypto.dart';
 
 Future<void> readfile() async {
+  const enctyptor = CBCFileCrypto();
+
   // const fileName = "jukto.jpg";
   // const fileName = "my_file.txt";
   const fileName = "video.mp4";
@@ -14,9 +15,27 @@ Future<void> readfile() async {
 
   final decryptedFile = File("./lib/file_operation/decryption/$fileName")
     ..createSync(recursive: true);
-  getFileDetails(myFile);
-  await encrypt(myFile, encryptedFile);
-  await decrypted(encryptedFile, decryptedFile);
+  // getFileDetails(myFile);
+  try {
+    DateTime startTime = DateTime.now();
+
+    await enctyptor.encrypt(
+      targetFile: myFile,
+      destinationFile: encryptedFile,
+      key: key,
+    );
+    DateTime endTime = DateTime.now();
+    print("Encrypted need : ${endTime.difference(startTime)}");
+  } on Error catch (e) {
+    print("Error encrypting");
+    print(e);
+    print(e.stackTrace);
+  }
+  await enctyptor.decrypt(
+    targetFile: encryptedFile,
+    destinationFile: decryptedFile,
+    key: key,
+  );
 }
 
 void getFileDetails(File file) {
@@ -30,127 +49,6 @@ void getFileDetails(File file) {
 }
 
 const key = "encryption k for file encryption";
-
-encrypt(File file, File encryptionFile) async {
-  RandomAccessFile rawFile = file.openSync();
-  RandomAccessFile distRawFile = encryptionFile.openSync(mode: FileMode.write);
-
-  const blockSize = 16;
-  final encryptor = BlockCipher('AES')
-    ..init(
-        true,
-        KeyParameter(
-          Uint8List.fromList(key.codeUnits),
-        ));
-
-  final decryptor = BlockCipher('AES')
-    ..init(
-        false,
-        KeyParameter(
-          Uint8List.fromList(key.codeUnits),
-        ));
-
-  final totalBytes = file.lengthSync();
-  int position = 0;
-  print("totalBytes $totalBytes");
-
-  while ((position + blockSize) <= totalBytes) {
-    rawFile.setPositionSync(position);
-    position += blockSize;
-    List<int> bytes = await rawFile.read(position);
-    final rowData = Uint8List.fromList(bytes);
-    final cypherData = encryptor.process(rowData);
-    distRawFile.writeFromSync(cypherData);
-  }
-
-  print(" =================================================================");
-  print("");
-  print("");
-
-  int paddingSize = 0;
-  if (position < totalBytes) {
-    rawFile.setPositionSync(position);
-    position = totalBytes;
-    List<int> bytes = await rawFile.read(position);
-    List<int> finalBytes = [];
-
-    print("position: $position");
-    print("totalBytes: $totalBytes");
-    print("bytes length : ${bytes.length}");
-
-    finalBytes.addAll(bytes);
-    paddingSize = (blockSize - finalBytes.length);
-    final endPosition = position + paddingSize;
-    while (++position <= endPosition) {
-      finalBytes.add(0);
-    }
-    print("finalBytes length : ${finalBytes.length}");
-
-    // print(String.fromCharCodes(finalBytes));
-    // print(finalBytes);
-    // print(finalBytes.length);
-
-    final rowData = Uint8List.fromList(finalBytes);
-    final cypherData = encryptor.process(rowData);
-    distRawFile.writeFromSync(cypherData);
-  }
-  distRawFile.writeFromSync([paddingSize]);
-  await rawFile.close();
-  await distRawFile.close();
-  print("position: $position && totalBytes: $totalBytes");
-  print("file encrypted successfully");
-
-  print("");
-  print("");
-  print(" =================================================================");
-}
-
-decrypted(File file, File decryptionFile) async {
-  RandomAccessFile rawFile = file.openSync();
-  RandomAccessFile distRawFile = decryptionFile.openSync(mode: FileMode.write);
-
-  const blockSize = 16;
-  final decryptor = BlockCipher('AES')
-    ..init(
-        false,
-        KeyParameter(
-          Uint8List.fromList(key.codeUnits),
-        ));
-
-  int totalBytes = file.lengthSync();
-  rawFile.setPositionSync(totalBytes - 1);
-
-  final [paddingSize] = await rawFile.read(totalBytes);
-  totalBytes--;
-
-  print("totalBytes $totalBytes");
-  int position = 0;
-  final endPosition = totalBytes - blockSize;
-  while ((position + blockSize) <= endPosition) {
-    rawFile.setPositionSync(position);
-    position += blockSize;
-    List<int> bytes = await rawFile.read(position);
-    final cypherData = Uint8List.fromList(bytes);
-    final rowData = decryptor.process(cypherData);
-    distRawFile.writeFromSync(rowData);
-  }
-  rawFile.setPositionSync(position);
-  position += blockSize;
-  List<int> bytes = await rawFile.read(position);
-  final cypherData = Uint8List.fromList(bytes);
-  final rowData = decryptor.process(cypherData);
-
-  final lastBlock = <int>[];
-  lastBlock.addAll(rowData);
-  for (var i = 0; i < paddingSize; i++) {
-    lastBlock.removeLast();
-  }
-  distRawFile.writeFromSync(lastBlock);
-
-  print(lastBlock);
-  await rawFile.close();
-  await distRawFile.close();
-}
 
 printHex(Uint8List data) {
   print("================================");
