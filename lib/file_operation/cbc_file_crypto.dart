@@ -1,6 +1,9 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:end2end/file_operation/read_file.dart';
 import 'package:pointycastle/api.dart';
+import 'package:pointycastle/block/aes.dart';
+import 'package:pointycastle/block/modes/cbc.dart';
 
 class CBCFileCrypto {
   static const blockSize = 16;
@@ -10,6 +13,7 @@ class CBCFileCrypto {
 
   const CBCFileCrypto();
 
+  final iv = "aaaaaaaaaaaaaaaa";
   encrypt({
     required File targetFile,
     required File destinationFile,
@@ -19,12 +23,14 @@ class CBCFileCrypto {
     RandomAccessFile distRawFile =
         destinationFile.openSync(mode: FileMode.write);
 
-    final encryptor = BlockCipher('AES')
-      ..init(
-          true,
-          KeyParameter(
-            Uint8List.fromList(key.codeUnits),
-          ));
+    final encryptor = CBCBlockCipher(AESEngine());
+    encryptor.init(
+      true,
+      ParametersWithIV(
+        KeyParameter(Uint8List.fromList(key.codeUnits)),
+        Uint8List.fromList(iv.codeUnits),
+      ),
+    );
 
     final totalBytes = targetFile.lengthSync();
     final blockableBytesCount = totalBytes ~/ blockSize;
@@ -56,7 +62,8 @@ class CBCFileCrypto {
         final blockOffSet = blockIdx * blockSize;
         encryptor.processBlock(blocks, blockOffSet, cypherBlocks, blockOffSet);
       }
-
+      printHex(blocks);
+      printHex(cypherBlocks);
       distRawFile.writeFromSync(cypherBlocks);
     }
 
@@ -92,12 +99,14 @@ class CBCFileCrypto {
     RandomAccessFile distRawFile =
         destinationFile.openSync(mode: FileMode.write);
 
-    final decryptor = BlockCipher('AES')
-      ..init(
-          false,
-          KeyParameter(
-            Uint8List.fromList(key.codeUnits),
-          ));
+    final decryptor = CBCBlockCipher(AESEngine());
+    decryptor.init(
+      false,
+      ParametersWithIV(
+        KeyParameter(Uint8List.fromList(key.codeUnits)),
+        Uint8List.fromList(iv.codeUnits),
+      ),
+    );
 
     int totalBytes = targetFile.lengthSync();
     rawFile.setPositionSync(totalBytes - 1);
