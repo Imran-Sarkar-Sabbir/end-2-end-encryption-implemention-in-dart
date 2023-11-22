@@ -5,12 +5,16 @@ import 'dart:typed_data';
 import 'package:encrypt/encrypt.dart';
 import 'package:end2end/file_operation/cbc_file_crypto.dart';
 
+const cypher_key = "encryption k for file encryption";
+final iv = "aaaaaaaaaaaaaaaa";
+
 Future<void> readfile() async {
-  const enctyptor = CBCFileCrypto();
+  final enctyptor = CBCFileCrypto();
 
   // const fileName = "jukto.jpg";
-  const fileName = "my_file.txt";
+  // const fileName = "my_file.txt";
   // const fileName = "video.mp4";
+  const fileName = "Docker Desktop Installer.exe";
   final myFile = File("./lib/file_operation/$fileName");
   final encryptedFile = File("./lib/file_operation/encryption/$fileName.ase")
     ..createSync(recursive: true);
@@ -23,24 +27,28 @@ Future<void> readfile() async {
 
   try {
     DateTime startTime = DateTime.now();
-
     await enctyptor.encrypt(
       targetFile: myFile,
       destinationFile: encryptedFile,
       key: cypher_key,
+      iv: iv,
     );
     DateTime endTime = DateTime.now();
-    print("Encrypted need : ${endTime.difference(startTime)}");
+    print("Encryption need : ${endTime.difference(startTime)}");
   } on Error catch (e) {
     print("Error encrypting");
     print(e);
     print(e.stackTrace);
   }
+  DateTime startTime = DateTime.now();
   await enctyptor.decrypt(
     targetFile: encryptedFile,
     destinationFile: decryptedFile,
     key: cypher_key,
+    iv: iv,
   );
+  DateTime endTime = DateTime.now();
+  print("Decryption need : ${endTime.difference(startTime)}");
 }
 
 void testCBC() {
@@ -115,7 +123,7 @@ void getFileDetails(File file) {
   print('Is a file: ${file.statSync().type == FileSystemEntityType.file}');
 }
 
-const cypher_key = "encryption k for file encryption";
+// const cypher_key = "0123456789ABCDEF";
 
 printHex(Uint8List data) {
   print("================================");

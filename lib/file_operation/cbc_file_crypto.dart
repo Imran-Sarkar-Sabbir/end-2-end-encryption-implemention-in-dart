@@ -1,28 +1,41 @@
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:end2end/file_operation/read_file.dart';
+
 import 'package:pointycastle/api.dart';
 import 'package:pointycastle/block/aes.dart';
 import 'package:pointycastle/block/modes/cbc.dart';
 
 class CBCFileCrypto {
   static const blockSize = 16;
-  static const numberOfBlocksInAChunk = 65536;
-  static const chunkSize =
-      blockSize * numberOfBlocksInAChunk * 3; // 3mb chunk su
+  static const chunkSizeInMegabytes = 3;
+  static const numberOfBlocksInAChunk = 65536 * chunkSizeInMegabytes;
+  static const chunkSize = blockSize * numberOfBlocksInAChunk; // 3mb chunk size
+  static const paddingChar = 65;
 
   const CBCFileCrypto();
 
-  final iv = "aaaaaaaaaaaaaaaa";
+  Future<Uint8List> _readFile({
+    required File file,
+    required int start,
+    required int end,
+  }) async {
+    final fileStream = file.openRead(start, end);
+    final listOfBytes = (await fileStream.toList()).expand(
+      (element) => element,
+    );
+    return Uint8List.fromList(listOfBytes.toList());
+  }
+
+  Future<Uint8List> _readChunk(File file, int position) async {
+    return _readFile(file: file, start: position, end: position + chunkSize);
+  }
+
   encrypt({
     required File targetFile,
     required File destinationFile,
     required String key,
+    required String iv,
   }) async {
-    RandomAccessFile rawFile = targetFile.openSync();
-    RandomAccessFile distRawFile =
-        destinationFile.openSync(mode: FileMode.write);
-
     final encryptor = CBCBlockCipher(AESEngine());
     encryptor.init(
       true,
@@ -31,62 +44,79 @@ class CBCFileCrypto {
         Uint8List.fromList(iv.codeUnits),
       ),
     );
-
     final totalBytes = targetFile.lengthSync();
     final blockableBytesCount = totalBytes ~/ blockSize;
     final blockableBytes = blockableBytesCount * blockSize;
     final totalChunkCount = blockableBytes ~/ chunkSize;
+    destinationFile.writeAsBytesSync([], flush: true, mode: FileMode.write);
 
     int position = 0;
-    final cypherChunk = Uint8List(chunkSize);
-    for (int chunkIdx = 0; chunkIdx < totalChunkCount; chunkIdx++) {
-      rawFile.setPositionSync(position);
-      position += chunkSize;
-      List<int> bytes = await rawFile.read(position);
-      final chunk = Uint8List.fromList(bytes);
-      for (int blockIdx = 0; blockIdx < numberOfBlocksInAChunk; blockIdx++) {
-        final offset = blockIdx * blockSize;
-        encryptor.processBlock(chunk, offset, cypherChunk, offset);
+    if (totalChunkCount > 0) {
+      final cypherChunk = Uint8List(chunkSize);
+      for (int chunkIdx = 0; chunkIdx < totalChunkCount; chunkIdx++) {
+        final chunk = await _readChunk(targetFile, position);
+        position += chunkSize;
+        int offset = 0;
+        for (int blockIdx = 0; blockIdx < numberOfBlocksInAChunk; blockIdx++) {
+          offset += encryptor.processBlock(chunk, offset, cypherChunk, offset);
+        }
+        destinationFile.writeAsBytesSync(
+          cypherChunk,
+          mode: FileMode.append,
+          flush: true,
+        );
       }
-      distRawFile.writeFromSync(cypherChunk);
     }
 
     if (position < blockableBytes) {
-      rawFile.setPositionSync(position);
+      List<int> bytes = await _readFile(
+        file: targetFile,
+        start: position,
+        end: blockableBytes,
+      );
       position = blockableBytes;
-      List<int> bytes = await rawFile.read(position);
       final blocks = Uint8List.fromList(bytes);
       final cypherBlocks = Uint8List(blocks.length);
       final totalBlocks = blocks.length ~/ blockSize;
+      int offset = 0;
       for (int blockIdx = 0; blockIdx < totalBlocks; blockIdx++) {
-        final blockOffSet = blockIdx * blockSize;
-        encryptor.processBlock(blocks, blockOffSet, cypherBlocks, blockOffSet);
+        offset += encryptor.processBlock(blocks, offset, cypherBlocks, offset);
       }
-      printHex(blocks);
-      printHex(cypherBlocks);
-      distRawFile.writeFromSync(cypherBlocks);
+      destinationFile.writeAsBytesSync(
+        cypherBlocks,
+        mode: FileMode.append,
+        flush: true,
+      );
     }
-
     int paddingSize = 0;
     if (position < totalBytes) {
-      rawFile.setPositionSync(position);
+      List<int> bytes = await _readFile(
+        file: targetFile,
+        start: position,
+        end: totalBytes,
+      );
       position = totalBytes;
-      List<int> bytes = await rawFile.read(position);
       List<int> finalBytes = [];
       finalBytes.addAll(bytes);
       paddingSize = (blockSize - finalBytes.length);
       final endPosition = position + paddingSize;
       while (++position <= endPosition) {
-        finalBytes.add(0);
+        finalBytes.add(paddingChar);
       }
       final rowData = Uint8List.fromList(finalBytes);
       final cypherData = encryptor.process(rowData);
-      distRawFile.writeFromSync(cypherData);
+      destinationFile.writeAsBytesSync(
+        cypherData,
+        mode: FileMode.append,
+        flush: true,
+      );
     }
 
-    distRawFile.writeFromSync([paddingSize]);
-    await rawFile.close();
-    await distRawFile.close();
+    destinationFile.writeAsBytesSync(
+      [paddingSize],
+      mode: FileMode.append,
+      flush: true,
+    );
     return true;
   }
 
@@ -94,11 +124,8 @@ class CBCFileCrypto {
     required File targetFile,
     required File destinationFile,
     required String key,
+    required String iv,
   }) async {
-    RandomAccessFile rawFile = targetFile.openSync();
-    RandomAccessFile distRawFile =
-        destinationFile.openSync(mode: FileMode.write);
-
     final decryptor = CBCBlockCipher(AESEngine());
     decryptor.init(
       false,
@@ -109,58 +136,71 @@ class CBCFileCrypto {
     );
 
     int totalBytes = targetFile.lengthSync();
-    rawFile.setPositionSync(totalBytes - 1);
-
-    final [paddingSize] = await rawFile.read(totalBytes);
+    final [paddingSize] = await _readFile(
+      file: targetFile,
+      start: totalBytes - 1,
+      end: totalBytes,
+    );
     totalBytes--;
 
-    final blockableBytesCount = (totalBytes ~/ blockSize) - 1;
+    final blockableBytesCount = (totalBytes ~/ blockSize);
     final blockableBytes = blockableBytesCount * blockSize;
-    final totalChunkCount = blockableBytes ~/ chunkSize;
+    assert(blockableBytes == totalBytes);
+    int totalChunkCount = blockableBytes ~/ chunkSize;
+    final totalChunkBytes = totalChunkCount * chunkSize;
+    final lastBlockInLastChunk = totalChunkBytes == blockableBytes;
+    if (lastBlockInLastChunk) {
+      totalChunkCount--;
+    }
 
+    // clear the file
+    destinationFile.writeAsBytesSync([], mode: FileMode.write, flush: true);
     int position = 0;
 
-    final decypherChunk = Uint8List(chunkSize);
-    for (int chunkIdx = 0; chunkIdx < totalChunkCount; chunkIdx++) {
-      rawFile.setPositionSync(position);
-      position += chunkSize;
-      List<int> bytes = await rawFile.read(position);
-      final chunk = Uint8List.fromList(bytes);
-      for (int blockIdx = 0; blockIdx < numberOfBlocksInAChunk; blockIdx++) {
-        final offset = blockIdx * blockSize;
-        decryptor.processBlock(chunk, offset, decypherChunk, offset);
+    if (totalChunkCount > 0) {
+      final decypherChunk = Uint8List(chunkSize);
+      for (int chunkIdx = 0; chunkIdx < totalChunkCount; chunkIdx++) {
+        final chunk = await _readChunk(targetFile, position);
+        position += chunkSize;
+        int offset = 0;
+        for (int blockIdx = 0; blockIdx < numberOfBlocksInAChunk; blockIdx++) {
+          offset += decryptor.processBlock(
+            chunk,
+            offset,
+            decypherChunk,
+            offset,
+          );
+        }
+        destinationFile.writeAsBytesSync(
+          decypherChunk,
+          mode: FileMode.append,
+          flush: true,
+        );
       }
-      distRawFile.writeFromSync(decypherChunk);
     }
 
-    if (position < blockableBytes) {
-      rawFile.setPositionSync(position);
-      position = blockableBytes;
-      List<int> bytes = await rawFile.read(position);
-      final blocks = Uint8List.fromList(bytes);
-      final cypherBlocks = Uint8List(blocks.length);
-      final totalBlocks = blocks.length ~/ blockSize;
-      for (int blockIdx = 0; blockIdx < totalBlocks; blockIdx++) {
-        final blockOffSet = blockIdx * blockSize;
-        decryptor.processBlock(blocks, blockOffSet, cypherBlocks, blockOffSet);
-      }
-      distRawFile.writeFromSync(cypherBlocks);
+    final cypherBlocks = await _readFile(
+      file: targetFile,
+      start: position,
+      end: blockableBytes,
+    );
+    position = blockableBytes;
+    final decypherBlock = Uint8List(cypherBlocks.length);
+    final numberOfBlocks = (cypherBlocks.length ~/ blockSize);
+    int offset = 0;
+    for (int blockIdx = 0; blockIdx < numberOfBlocks; blockIdx++) {
+      offset += decryptor.processBlock(
+        cypherBlocks,
+        offset,
+        decypherBlock,
+        offset,
+      );
     }
-
-    rawFile.setPositionSync(position);
-    position += blockSize;
-    List<int> bytes = await rawFile.read(position);
-    final cypherData = Uint8List.fromList(bytes);
-    final rowData = decryptor.process(cypherData);
-    final lastBlock = <int>[];
-    lastBlock.addAll(rowData);
-    for (var i = 0; i < paddingSize; i++) {
-      lastBlock.removeLast();
-    }
-    distRawFile.writeFromSync(lastBlock);
-
-    await rawFile.close();
-    await distRawFile.close();
+    destinationFile.writeAsBytesSync(
+      decypherBlock.sublist(0, decypherBlock.length - paddingSize),
+      mode: FileMode.append,
+      flush: true,
+    );
     return true;
   }
 }
