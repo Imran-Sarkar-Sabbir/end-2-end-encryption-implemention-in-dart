@@ -25,18 +25,18 @@ class InDeviceIdentityKeyStore extends IdentityKeyStore {
       throw Exception("InDeviceIdentityKeyStore already initialized");
     }
     _instance = this;
-    save();
   }
 
   static Future<InDeviceIdentityKeyStore?> retrive(KeyStorage store) async {
     if (_instance != null) return _instance;
     final identityData = await store.retrieve(
       key: _key_identity,
-      partition: _trustedKeyPortion,
+      partition: _identityKeyPortion,
     );
+
     final registrationId = await store.retrieve(
       key: _key_registration,
-      partition: _trustedKeyPortion,
+      partition: _identityKeyPortion,
     );
 
     if (identityData != null && registrationId != null) {
@@ -55,6 +55,7 @@ class InDeviceIdentityKeyStore extends IdentityKeyStore {
       value: identityKeyPair.serialize(),
       partition: _identityKeyPortion,
     );
+
     await store.store(
       key: _key_registration,
       value: localRegistrationId,

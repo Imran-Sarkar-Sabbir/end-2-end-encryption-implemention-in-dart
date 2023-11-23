@@ -16,7 +16,7 @@ class InDeviceSignedPreKeyStore extends SignedPreKeyStore {
   static Future<InDeviceSignedPreKeyStore?> retrive(KeyStorage store) async {
     if (_instance != null) return _instance;
     final hasSignedPreKey = await store.hasData(key: _signedPreKeyPortion);
-    if (!hasSignedPreKey) {
+    if (hasSignedPreKey) {
       return InDeviceSignedPreKeyStore(store);
     }
     return null;

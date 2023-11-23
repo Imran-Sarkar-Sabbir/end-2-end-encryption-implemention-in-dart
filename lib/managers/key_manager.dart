@@ -25,7 +25,7 @@ class KeyManager {
   });
 
   Future<void> init() async {
-    keyStorage.init();
+    await keyStorage.init();
   }
 
   Future<void> install() async {
@@ -71,6 +71,7 @@ class KeyManager {
           registrationId,
           keyStorage,
         );
+        await identityStore!.save();
       }
       return hasSaved;
     } catch (e) {
