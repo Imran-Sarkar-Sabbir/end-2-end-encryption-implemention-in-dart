@@ -15,11 +15,12 @@ Future<void> readfile() async {
   // const fileName = "my_file.txt";
   // const fileName = "video.mp4";
   const fileName = "Docker Desktop Installer.exe";
+  // const fileName = "VSCodeUserSetup-x64-1.54.1.exe";
   final myFile = File("./lib/file_operation/$fileName");
-  final encryptedFile = File("./lib/file_operation/encryption/$fileName.ase")
+  final encryptedFile = File("./lib/file_operation/encryption/a$fileName.ase")
     ..createSync(recursive: true);
 
-  final decryptedFile = File("./lib/file_operation/decryption/$fileName")
+  final decryptedFile = File("./lib/file_operation/decryption/a$fileName")
     ..createSync(recursive: true);
 
   // testCBC();
@@ -28,8 +29,8 @@ Future<void> readfile() async {
   try {
     DateTime startTime = DateTime.now();
     await enctyptor.encrypt(
-      targetFile: myFile,
-      destinationFile: encryptedFile,
+      source: myFile,
+      dest: encryptedFile,
       key: cypher_key,
       iv: iv,
     );
@@ -42,8 +43,8 @@ Future<void> readfile() async {
   }
   DateTime startTime = DateTime.now();
   await enctyptor.decrypt(
-    targetFile: encryptedFile,
-    destinationFile: decryptedFile,
+    source: encryptedFile,
+    dest: decryptedFile,
     key: cypher_key,
     iv: iv,
   );

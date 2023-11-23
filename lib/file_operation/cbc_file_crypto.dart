@@ -14,25 +14,27 @@ class CBCFileCrypto {
 
   const CBCFileCrypto();
 
-  Future<Uint8List> _readFile({
-    required File file,
+  Uint8List _readFile({
+    required RandomAccessFile file,
     required int start,
     required int end,
-  }) async {
-    final fileStream = file.openRead(start, end);
-    final listOfBytes = (await fileStream.toList()).expand(
-      (element) => element,
-    );
-    return Uint8List.fromList(listOfBytes.toList());
+  }) {
+    file.setPositionSync(start);
+    return file.readSync(end - start);
   }
 
-  Future<Uint8List> _readChunk(File file, int position) async {
-    return _readFile(file: file, start: position, end: position + chunkSize);
+  Uint8List _readChunk(RandomAccessFile file, int position) {
+    final buffer = _readFile(
+      file: file,
+      start: position,
+      end: position + chunkSize,
+    );
+    return buffer;
   }
 
   encrypt({
-    required File targetFile,
-    required File destinationFile,
+    required File source,
+    required File dest,
     required String key,
     required String iv,
   }) async {
@@ -44,33 +46,30 @@ class CBCFileCrypto {
         Uint8List.fromList(iv.codeUnits),
       ),
     );
-    final totalBytes = targetFile.lengthSync();
+    final sorceFile = source.openSync();
+    final totalBytes = sorceFile.lengthSync();
     final blockableBytesCount = totalBytes ~/ blockSize;
     final blockableBytes = blockableBytesCount * blockSize;
     final totalChunkCount = blockableBytes ~/ chunkSize;
-    destinationFile.writeAsBytesSync([], flush: true, mode: FileMode.write);
+    final destFile = dest.openSync(mode: FileMode.write);
 
     int position = 0;
     if (totalChunkCount > 0) {
       final cypherChunk = Uint8List(chunkSize);
       for (int chunkIdx = 0; chunkIdx < totalChunkCount; chunkIdx++) {
-        final chunk = await _readChunk(targetFile, position);
+        final chunk = _readChunk(sorceFile, position);
         position += chunkSize;
         int offset = 0;
         for (int blockIdx = 0; blockIdx < numberOfBlocksInAChunk; blockIdx++) {
           offset += encryptor.processBlock(chunk, offset, cypherChunk, offset);
         }
-        destinationFile.writeAsBytesSync(
-          cypherChunk,
-          mode: FileMode.append,
-          flush: true,
-        );
+        destFile.writeFromSync(cypherChunk);
       }
     }
 
     if (position < blockableBytes) {
-      List<int> bytes = await _readFile(
-        file: targetFile,
+      List<int> bytes = _readFile(
+        file: sorceFile,
         start: position,
         end: blockableBytes,
       );
@@ -82,16 +81,12 @@ class CBCFileCrypto {
       for (int blockIdx = 0; blockIdx < totalBlocks; blockIdx++) {
         offset += encryptor.processBlock(blocks, offset, cypherBlocks, offset);
       }
-      destinationFile.writeAsBytesSync(
-        cypherBlocks,
-        mode: FileMode.append,
-        flush: true,
-      );
+      destFile.writeFromSync(cypherBlocks);
     }
     int paddingSize = 0;
     if (position < totalBytes) {
-      List<int> bytes = await _readFile(
-        file: targetFile,
+      List<int> bytes = _readFile(
+        file: sorceFile,
         start: position,
         end: totalBytes,
       );
@@ -105,24 +100,18 @@ class CBCFileCrypto {
       }
       final rowData = Uint8List.fromList(finalBytes);
       final cypherData = encryptor.process(rowData);
-      destinationFile.writeAsBytesSync(
-        cypherData,
-        mode: FileMode.append,
-        flush: true,
-      );
+      destFile.writeFromSync(cypherData);
     }
 
-    destinationFile.writeAsBytesSync(
-      [paddingSize],
-      mode: FileMode.append,
-      flush: true,
-    );
+    destFile.writeFromSync([paddingSize]);
+    sorceFile.closeSync();
+    destFile.closeSync();
     return true;
   }
 
   decrypt({
-    required File targetFile,
-    required File destinationFile,
+    required File source,
+    required File dest,
     required String key,
     required String iv,
   }) async {
@@ -135,9 +124,10 @@ class CBCFileCrypto {
       ),
     );
 
-    int totalBytes = targetFile.lengthSync();
-    final [paddingSize] = await _readFile(
-      file: targetFile,
+    final sourceFile = source.openSync();
+    int totalBytes = sourceFile.lengthSync();
+    final [paddingSize] = _readFile(
+      file: sourceFile,
       start: totalBytes - 1,
       end: totalBytes,
     );
@@ -154,13 +144,13 @@ class CBCFileCrypto {
     }
 
     // clear the file
-    destinationFile.writeAsBytesSync([], mode: FileMode.write, flush: true);
+    final destFile = dest.openSync(mode: FileMode.write);
     int position = 0;
 
     if (totalChunkCount > 0) {
       final decypherChunk = Uint8List(chunkSize);
       for (int chunkIdx = 0; chunkIdx < totalChunkCount; chunkIdx++) {
-        final chunk = await _readChunk(targetFile, position);
+        final chunk = _readChunk(sourceFile, position);
         position += chunkSize;
         int offset = 0;
         for (int blockIdx = 0; blockIdx < numberOfBlocksInAChunk; blockIdx++) {
@@ -171,16 +161,12 @@ class CBCFileCrypto {
             offset,
           );
         }
-        destinationFile.writeAsBytesSync(
-          decypherChunk,
-          mode: FileMode.append,
-          flush: true,
-        );
+        destFile.writeFromSync(decypherChunk);
       }
     }
 
-    final cypherBlocks = await _readFile(
-      file: targetFile,
+    final cypherBlocks = _readFile(
+      file: sourceFile,
       start: position,
       end: blockableBytes,
     );
@@ -196,10 +182,9 @@ class CBCFileCrypto {
         offset,
       );
     }
-    destinationFile.writeAsBytesSync(
+
+    destFile.writeFromSync(
       decypherBlock.sublist(0, decypherBlock.length - paddingSize),
-      mode: FileMode.append,
-      flush: true,
     );
     return true;
   }
