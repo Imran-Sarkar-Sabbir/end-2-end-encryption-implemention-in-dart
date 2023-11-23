@@ -69,6 +69,7 @@ class InDeviceIdentityKeyStore extends IdentityKeyStore {
       key: address.toString(),
       partition: _trustedKeyPortion,
     );
+    if (identityData == null) return null;
     return IdentityKey.fromBytes(identityData, 0);
   }
 
