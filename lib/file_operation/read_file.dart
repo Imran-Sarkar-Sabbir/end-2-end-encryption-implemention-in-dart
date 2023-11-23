@@ -13,18 +13,16 @@ Future<void> readfile() async {
 
   // const fileName = "jukto.jpg";
   // const fileName = "my_file.txt";
-  // const fileName = "video.mp4";
-  const fileName = "Docker Desktop Installer.exe";
+  const fileName = "video.mp4";
+  // const fileName = "Docker Desktop Installer.exe";
   // const fileName = "VSCodeUserSetup-x64-1.54.1.exe";
+  // const fileName ="Extraction.2.2023.1080p.NF.WEB-DL.DDP5.1.Atmos.H.264-XEBEC.mkv";
   final myFile = File("./lib/file_operation/$fileName");
-  final encryptedFile = File("./lib/file_operation/encryption/a$fileName.ase")
+  final encryptedFile = File("./lib/file_operation/encryption/$fileName.ase")
     ..createSync(recursive: true);
 
-  final decryptedFile = File("./lib/file_operation/decryption/a$fileName")
+  final decryptedFile = File("./lib/file_operation/decryption/$fileName")
     ..createSync(recursive: true);
-
-  // testCBC();
-  // return;
 
   try {
     DateTime startTime = DateTime.now();
@@ -50,88 +48,4 @@ Future<void> readfile() async {
   );
   DateTime endTime = DateTime.now();
   print("Decryption need : ${endTime.difference(startTime)}");
-}
-
-void testCBC() {
-  final plainText = [
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1
-  ];
-  final messageAuthenticationCode = 'flutter is awesome';
-
-  final key = Key(Uint8List.fromList(cypher_key.codeUnits));
-  final iv = IV(Uint8List.fromList("iiiiiiiiiiiiiiii".codeUnits));
-  final macValue = Uint8List.fromList(utf8.encode(messageAuthenticationCode));
-
-  final encrypter = Encrypter(AES(key, mode: AESMode.cbc, padding: ""));
-
-  final encrypted = encrypter.encryptBytes(
-    plainText,
-    iv: iv,
-    // associatedData: macValue,
-  );
-  final decrypted = encrypter.decrypt(
-    encrypted,
-    iv: iv,
-    // associatedData: macValue,
-  );
-
-  print(plainText.length);
-  print(decrypted);
-  print(encrypted.bytes);
-  print(encrypted.bytes.length);
-  print(encrypted.base16);
-  print(encrypted.base64);
-}
-
-void getFileDetails(File file) {
-  print('File exists: ${file.path}');
-  print('File length: ${file.lengthSync()} bytes');
-  print('Last modified: ${file.lastModifiedSync()}');
-  print(
-    'Is a directory: ${file.statSync().type == FileSystemEntityType.directory}',
-  );
-  print('Is a file: ${file.statSync().type == FileSystemEntityType.file}');
-}
-
-// const cypher_key = "0123456789ABCDEF";
-
-printHex(Uint8List data) {
-  print("================================");
-  print("data length : ${data.length}");
-  print(toHex(data));
-}
-
-toHex(Uint8List data) {
-  return data.map((e) => e.toRadixString(16)).join();
 }

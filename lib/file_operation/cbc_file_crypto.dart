@@ -24,12 +24,11 @@ class CBCFileCrypto {
   }
 
   Uint8List _readChunk(RandomAccessFile file, int position) {
-    final buffer = _readFile(
+    return _readFile(
       file: file,
       start: position,
       end: position + chunkSize,
     );
-    return buffer;
   }
 
   encrypt({
@@ -60,6 +59,7 @@ class CBCFileCrypto {
         final chunk = _readChunk(sorceFile, position);
         position += chunkSize;
         int offset = 0;
+
         for (int blockIdx = 0; blockIdx < numberOfBlocksInAChunk; blockIdx++) {
           offset += encryptor.processBlock(chunk, offset, cypherChunk, offset);
         }
@@ -126,6 +126,7 @@ class CBCFileCrypto {
 
     final sourceFile = source.openSync();
     int totalBytes = sourceFile.lengthSync();
+    // last block contains the padding information
     final [paddingSize] = _readFile(
       file: sourceFile,
       start: totalBytes - 1,
