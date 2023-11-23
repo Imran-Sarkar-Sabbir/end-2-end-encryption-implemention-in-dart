@@ -104,8 +104,8 @@ class CBCFileCrypto {
     }
 
     destFile.writeFromSync([paddingSize]);
-    sorceFile.closeSync();
     destFile.closeSync();
+    sorceFile.closeSync();
     return true;
   }
 
@@ -186,6 +186,9 @@ class CBCFileCrypto {
     destFile.writeFromSync(
       decypherBlock.sublist(0, decypherBlock.length - paddingSize),
     );
+
+    destFile.closeSync();
+    sourceFile.closeSync();
     return true;
   }
 }
