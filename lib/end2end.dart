@@ -6,6 +6,8 @@ import 'package:end2end/my_key_manager.dart';
 import 'package:libsignal_protocol_dart/libsignal_protocol_dart.dart';
 
 Future<void> installE2EE() async {
+  // groupTest();
+  // return;
   await myKeyManager.init();
   await myKeyManager.install();
 
@@ -56,7 +58,6 @@ fetchMessages() async {
         print("error decrypting message");
       }
     }
-    await myKeyManager.saveSession();
   }
 }
 
@@ -94,8 +95,6 @@ Future<SessionCipher?> getSessionCipher(String userId) async {
         address,
       );
       await sessionBuilder.processPreKeyBundle(retrievedPreKey);
-      await myKeyManager.saveSession();
-      await myKeyManager.storeIdentity();
     } on Error catch (e) {
       print(e);
       print(e.stackTrace);
@@ -132,7 +131,6 @@ sendMessages(String message) async {
       Uint8List.fromList(utf8.encode(message)),
     );
 
-    await myKeyManager.saveSession();
     await apiPost("/messages/$otherId", {
       "msg": String.fromCharCodes(cipherMsg.serialize()),
       "from": myId,
@@ -141,4 +139,47 @@ sendMessages(String message) async {
     print(e);
     print("error on encrypting message or sending");
   }
+}
+
+Future<void> groupTest() async {
+  const alice = SignalProtocolAddress('+00000000001', 1);
+  const groupSender = SenderKeyName('Private group', alice);
+  final aliceStore = InMemorySenderKeyStore();
+  final bobStore = InMemorySenderKeyStore();
+  final tomStore = InMemorySenderKeyStore();
+
+  final aliceSessionBuilder = GroupSessionBuilder(aliceStore);
+  final bobSessionBuilder = GroupSessionBuilder(bobStore);
+  final tomSessionBuilder = GroupSessionBuilder(tomStore);
+
+  final aliceGroupCipher = GroupCipher(aliceStore, groupSender);
+  final bobGroupCipher = GroupCipher(bobStore, groupSender);
+  final tomGroupCipher = GroupCipher(tomStore, groupSender);
+
+  final sentAliceDistributionMessage =
+      await aliceSessionBuilder.create(groupSender);
+
+  final receivedAliceDistributionMessage =
+      SenderKeyDistributionMessageWrapper.fromSerialized(
+    sentAliceDistributionMessage.serialize(),
+  );
+
+  await bobSessionBuilder.process(
+    groupSender,
+    receivedAliceDistributionMessage,
+  );
+
+  await tomSessionBuilder.process(
+    groupSender,
+    receivedAliceDistributionMessage,
+  );
+
+  final ciphertextFromAlice = await aliceGroupCipher
+      .encrypt(Uint8List.fromList(utf8.encode('Hello Mixin')));
+  final plaintextFromAlice = await bobGroupCipher.decrypt(ciphertextFromAlice);
+  final plaintextFromAliceForTom =
+      await tomGroupCipher.decrypt(ciphertextFromAlice);
+  // ignore: avoid_print
+  print(utf8.decode(plaintextFromAlice));
+  print(utf8.decode(plaintextFromAliceForTom));
 }

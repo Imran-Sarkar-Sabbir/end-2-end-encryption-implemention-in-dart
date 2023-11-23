@@ -5,8 +5,8 @@ import 'package:end2end/file_operation/read_file.dart';
 import 'package:libsignal_protocol_dart/libsignal_protocol_dart.dart';
 
 Future<void> main(List<String> arguments) async {
-  readfile();
-  // installE2EE();
+  // readfile();
+  installE2EE();
   return;
 
   final [

@@ -1,4 +1,4 @@
-import 'package:end2end/storage/key_storage.dart';
+import 'package:end2end/crypto/storage_manager/key_storage.dart';
 import 'package:libsignal_protocol_dart/libsignal_protocol_dart.dart';
 
 class KeyStorageManager {
@@ -41,12 +41,12 @@ class KeyStorageManager {
   }
 
   Future<InMemoryIdentityKeyStore?> retriveIdentityKey() async {
-    final identityKeyPairData = await keyStorage.retrive(
+    final identityKeyPairData = await keyStorage.retrieve(
       partition: _identityPartition,
       key: "identityKeyPair",
     );
 
-    final registrationID = await keyStorage.retrive(
+    final registrationID = await keyStorage.retrieve(
       partition: _identityPartition,
       key: "registrationId",
     );
@@ -64,7 +64,7 @@ class KeyStorageManager {
       registrationID,
     );
 
-    final trastedKey = await keyStorage.retrive(
+    final trastedKey = await keyStorage.retrieve(
       partition: _identityPartition,
       key: "trastedKey",
     );
@@ -98,7 +98,7 @@ class KeyStorageManager {
   }
 
   Future<InMemorySignedPreKeyStore?> retriveSignedPreKey() async {
-    final keyMap = await keyStorage.retrive(
+    final keyMap = await keyStorage.retrieve(
       partition: _signedPreKeyPartition,
       key: _signedPreKeyPartition,
     );
@@ -128,7 +128,7 @@ class KeyStorageManager {
   }
 
   Future<InMemoryPreKeyStore?> retrivePreKey() async {
-    final keyMap = await keyStorage.retrive(
+    final keyMap = await keyStorage.retrieve(
       partition: _preKeyPartition,
       key: _preKeyPartition,
     );

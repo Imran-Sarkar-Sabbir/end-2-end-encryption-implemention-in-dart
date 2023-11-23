@@ -1,15 +1,18 @@
-import 'package:end2end/managers/key_storage_manager.dart';
+import 'package:end2end/crypto/storage_manager/key_storage.dart';
+import 'package:end2end/crypto/stores/InDeviceIdentityKeyStore.dart';
+import 'package:end2end/crypto/stores/InDevicePreKeyStore.dart';
+import 'package:end2end/crypto/stores/InDeviceSessionStore.dart';
+import 'package:end2end/crypto/stores/InDeviceSignedPreKeyStore.dart';
 import 'package:libsignal_protocol_dart/libsignal_protocol_dart.dart';
 
 typedef KeySender = Future<bool> Function(Map<String, dynamic>);
 
 class KeyManager {
-  static const _preKeysCount = 110;
-  final keyStorageManager = KeyStorageManager();
-  InMemorySignedPreKeyStore? signedPreKeyStore;
-  InMemoryIdentityKeyStore? identityStore;
-  InMemoryPreKeyStore? preKeyStore;
-  InMemorySessionStore? sessionStore;
+  final keyStorage = KeyStorage();
+  InDeviceIdentityKeyStore? identityStore;
+  InDeviceSignedPreKeyStore? signedPreKeyStore;
+  InDevicePreKeyStore? preKeyStore;
+  InDeviceSessionStore? sessionStore;
 
   final KeySender identityKeySender;
   final KeySender signedPreKeySender;
@@ -22,29 +25,39 @@ class KeyManager {
   });
 
   Future<void> init() async {
-    keyStorageManager.initStorage();
+    keyStorage.init();
   }
 
   Future<void> install() async {
-    identityStore = await keyStorageManager.retriveIdentityKey();
+    identityStore = await InDeviceIdentityKeyStore.retrive(keyStorage);
     if (identityStore == null) {
-      if (!await generateIdentityKey()) {
+      if (!await generateIdentityKeyStore()) {
         throw Exception("Error saving identity key");
       }
     }
-    signedPreKeyStore = await keyStorageManager.retriveSignedPreKey();
+
+    signedPreKeyStore = await InDeviceSignedPreKeyStore.retrive(keyStorage);
     if (signedPreKeyStore == null) {
-      if (!await genSignedPreKey()) {
+      if (!await genSignedPreKeyStore()) {
         throw Exception("Error saving signed pre key");
       }
     }
-    if (!await managePreKey()) {
-      throw Exception("Error saving signed pre key");
+
+    preKeyStore = await InDevicePreKeyStore.retrive(keyStorage);
+    if (preKeyStore == null) {
+      if (!await genPreKeyStore()) {
+        throw Exception("Error saving pre key");
+      }
     }
-    sessionStore = await keyStorageManager.retriveSessions();
+
+    if (await preKeyStore!.shouldGenPreKey()) {
+      await genPreKeys();
+    }
+
+    sessionStore = await InDeviceSessionStore.retrive(keyStorage);
   }
 
-  Future<bool> generateIdentityKey() async {
+  Future<bool> generateIdentityKeyStore() async {
     try {
       final identityKeyPair = generateIdentityKeyPair();
       final registrationId = generateRegistrationId(false);
@@ -53,11 +66,11 @@ class KeyManager {
         "identityPublic": identityKeyPair.getPublicKey().serialize(),
       });
       if (hasSaved) {
-        identityStore = InMemoryIdentityKeyStore(
+        identityStore = InDeviceIdentityKeyStore(
           identityKeyPair,
           registrationId,
+          keyStorage,
         );
-        await keyStorageManager.storeIdentityKey(identityStore!);
       }
       return hasSaved;
     } catch (e) {
@@ -67,7 +80,7 @@ class KeyManager {
     }
   }
 
-  Future<bool> genSignedPreKey() async {
+  Future<bool> genSignedPreKeyStore() async {
     try {
       final signedPreKey = generateSignedPreKey(
         identityStore!.identityKeyPair,
@@ -79,12 +92,11 @@ class KeyManager {
         "signedPreKeyPublic": signedPreKey.getKeyPair().publicKey.serialize(),
       });
       if (hasSend) {
-        signedPreKeyStore = InMemorySignedPreKeyStore();
+        signedPreKeyStore = InDeviceSignedPreKeyStore(keyStorage);
         await signedPreKeyStore!.storeSignedPreKey(
           signedPreKey.id,
           signedPreKey,
         );
-        await keyStorageManager.storeSignedPreKey(signedPreKeyStore!);
       }
       return hasSend;
     } catch (e) {
@@ -94,30 +106,15 @@ class KeyManager {
     }
   }
 
-  Future<bool> managePreKey() async {
-    preKeyStore = await keyStorageManager.retrivePreKey();
-    if (preKeyStore == null) {
-      return genPreKeys(0);
-    }
-    return true;
-  }
-
-  Future<bool> genPreKeys(int start) async {
+  Future<bool> genPreKeyStore() async {
     try {
-      preKeyStore = InMemoryPreKeyStore();
-      final preKeys = generatePreKeys(start, _preKeysCount);
-      final keyMap = <String, dynamic>{};
-      for (final p in preKeys) {
-        keyMap["${p.id}"] = p.getKeyPair().publicKey.serialize();
+      preKeyStore = InDevicePreKeyStore(keyStorage);
+
+      if (await preKeyStore!.shouldGenPreKey()) {
+        return genPreKeys();
+      } else {
+        return true;
       }
-      final hasSend = await preKeySender(keyMap);
-      if (hasSend) {
-        for (final p in preKeys) {
-          await preKeyStore!.storePreKey(p.id, p);
-        }
-        await keyStorageManager.storePreKeys(preKeyStore!);
-      }
-      return hasSend;
     } catch (e) {
       print("error on sending pre key");
       print(e);
@@ -125,12 +122,25 @@ class KeyManager {
     }
   }
 
-  storeIdentity() {
-    keyStorageManager.storeIdentityKey(identityStore!);
-  }
-
-  saveSession() async {
-    await keyStorageManager.storeSessions(sessionStore!);
+  Future<bool> genPreKeys() async {
+    int preKeyIndex = await preKeyStore!.getPreKeyIndex();
+    final preKeys = generatePreKeys(
+      preKeyIndex,
+      preKeyIndex + InDevicePreKeyStore.GEN_PRE_KEY_PER_BATCH,
+    );
+    final keyMap = <String, dynamic>{};
+    for (final p in preKeys) {
+      keyMap["${p.id}"] = p.getKeyPair().publicKey.serialize();
+    }
+    final hasSend = await preKeySender(keyMap);
+    if (hasSend) {
+      for (final p in preKeys) {
+        await preKeyStore!.storePreKey(p.id, p);
+      }
+    }
+    int lastIndex = (preKeys.last.id + 1).remainder(maxValue - 1) + 1;
+    await preKeyStore?.storePreKeyIndex(lastIndex);
+    return hasSend;
   }
 
   hasSessionWith({required SignalProtocolAddress user}) {
