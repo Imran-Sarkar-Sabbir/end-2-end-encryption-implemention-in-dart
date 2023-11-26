@@ -1,5 +1,3 @@
-// ignore_for_file: constant_identifier_names
-
 import 'package:end2end/crypto/storage_manager/key_storage.dart';
 import 'package:libsignal_protocol_dart/libsignal_protocol_dart.dart';
 import 'package:libsignal_protocol_dart/src/eq.dart';
@@ -9,8 +7,8 @@ class InDeviceIdentityKeyStore extends IdentityKeyStore {
   static const _identityKeyPortion = "identity_";
   static const _trustedKeyPortion = "trusted_";
 
-  static const _key_identity = "identity_key";
-  static const _key_registration = "registration_key";
+  static const _keyIdentity = "identity_key";
+  static const _keyRegistration = "registration_key";
 
   final IdentityKeyPair identityKeyPair;
   final int localRegistrationId;
@@ -30,12 +28,12 @@ class InDeviceIdentityKeyStore extends IdentityKeyStore {
   static Future<InDeviceIdentityKeyStore?> retrive(KeyStorage store) async {
     if (_instance != null) return _instance;
     final identityData = await store.retrieve(
-      key: _key_identity,
+      key: _keyIdentity,
       partition: _identityKeyPortion,
     );
 
     final registrationId = await store.retrieve(
-      key: _key_registration,
+      key: _keyRegistration,
       partition: _identityKeyPortion,
     );
 
@@ -51,13 +49,13 @@ class InDeviceIdentityKeyStore extends IdentityKeyStore {
 
   Future save() async {
     await store.store(
-      key: _key_identity,
+      key: _keyIdentity,
       value: identityKeyPair.serialize(),
       partition: _identityKeyPortion,
     );
 
     await store.store(
-      key: _key_registration,
+      key: _keyRegistration,
       value: localRegistrationId,
       partition: _identityKeyPortion,
     );
