@@ -1,18 +1,21 @@
+import 'package:end2end/crypto/storage_manager/adapters/hive_storage.dart';
 import 'package:end2end/crypto/storage_manager/key_storage.dart';
-import 'package:end2end/crypto/stores/InDeviceIdentityKeyStore.dart';
-import 'package:end2end/crypto/stores/InDevicePreKeyStore.dart';
-import 'package:end2end/crypto/stores/InDeviceSessionStore.dart';
-import 'package:end2end/crypto/stores/InDeviceSignedPreKeyStore.dart';
+import 'package:end2end/crypto/storage_manager/stores/InDeviceIdentityKeyStore.dart';
+import 'package:end2end/crypto/storage_manager/stores/InDevicePreKeyStore.dart';
+import 'package:end2end/crypto/storage_manager/stores/InDeviceSenderKeyStore.dart';
+import 'package:end2end/crypto/storage_manager/stores/InDeviceSessionStore.dart';
+import 'package:end2end/crypto/storage_manager/stores/InDeviceSignedPreKeyStore.dart';
 import 'package:libsignal_protocol_dart/libsignal_protocol_dart.dart';
 
 typedef KeySender = Future<bool> Function(Map<String, dynamic>);
 
 class KeyManager {
-  final keyStorage = KeyStorage();
+  final KeyStorage keyStorage = HiveKeyStore(path: "hive");
   InDeviceIdentityKeyStore? identityStore;
   InDeviceSignedPreKeyStore? signedPreKeyStore;
   InDevicePreKeyStore? preKeyStore;
   InDeviceSessionStore? sessionStore;
+  InDeviceSenderKeyStore? senderStore;
 
   final KeySender identityKeySender;
   final KeySender signedPreKeySender;
@@ -25,7 +28,7 @@ class KeyManager {
   });
 
   Future<void> init() async {
-    await keyStorage.init();
+    // await keyStorage.init();
   }
 
   Future<void> install() async {
@@ -55,6 +58,7 @@ class KeyManager {
     }
 
     sessionStore = await InDeviceSessionStore.retrive(keyStorage);
+    senderStore = await InDeviceSenderKeyStore.retrive(keyStorage);
   }
 
   Future<bool> generateIdentityKeyStore() async {

@@ -1,16 +1,22 @@
-import 'package:end2end/crypto/storage_manager/key_storage_interface.dart';
+import 'package:end2end/crypto/storage_manager/key_storage.dart';
 import 'package:hive/hive.dart';
 
-class HiveAdapter implements KeyStorageInterface {
+class HiveKeyStore implements KeyStorage {
+  final String path;
+  HiveKeyStore({required this.path});
+
   @override
   Future<void> init() async {
-    Hive.init("hive_storage");
+    Hive.init(path);
   }
 
   @override
   Future retrieve({required String key, String? partition}) async {
+    await init();
     final box = await Hive.openBox(partition ?? key);
-    return box.get(key);
+    final data = box.get(key);
+    await Hive.close();
+    return data;
   }
 
   @override
@@ -18,8 +24,11 @@ class HiveAdapter implements KeyStorageInterface {
     required String key,
     String? partition,
   }) async {
+    await init();
     final box = await Hive.openBox(partition ?? key);
-    return Map.fromIterables(box.keys, box.values);
+    final r = Map.fromIterables(box.keys, box.values);
+    await Hive.close();
+    return r;
   }
 
   @override
@@ -28,19 +37,26 @@ class HiveAdapter implements KeyStorageInterface {
     required value,
     String? partition,
   }) async {
+    await init();
     final box = await Hive.openBox(partition ?? key);
     box.put(key, value);
+    await Hive.close();
   }
 
   @override
   Future<void> remove({required String key, String? partition}) async {
+    await init();
     final box = await Hive.openBox(partition ?? key);
-    return box.delete(key);
+    box.delete(key);
+    await Hive.close();
   }
 
   @override
   Future<bool> hasData({required String key, String? partition}) async {
+    await init();
     final box = await Hive.openBox(partition ?? key);
-    return box.isNotEmpty;
+    final r = box.isNotEmpty;
+    await Hive.close();
+    return r;
   }
 }

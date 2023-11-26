@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:encrypt/encrypt.dart';
-import 'package:end2end/file_operation/cbc_file_crypto.dart';
+import 'package:end2end/crypto/crypto_utilities/cbc_file_crypto.dart';
 
 const cypher_key = "encryption k for file encryption";
 final iv = "aaaaaaaaaaaaaaaa";
@@ -29,8 +29,8 @@ Future<void> readfile() async {
     await enctyptor.encrypt(
       source: myFile,
       dest: encryptedFile,
-      key: cypher_key,
-      iv: iv,
+      key: Uint8List.fromList(cypher_key.codeUnits),
+      iv: Uint8List.fromList(iv.codeUnits),
     );
     DateTime endTime = DateTime.now();
     print("Encryption need : ${endTime.difference(startTime)}");
@@ -43,8 +43,8 @@ Future<void> readfile() async {
   await enctyptor.decrypt(
     source: encryptedFile,
     dest: decryptedFile,
-    key: cypher_key,
-    iv: iv,
+    key: Uint8List.fromList(cypher_key.codeUnits),
+    iv: Uint8List.fromList(iv.codeUnits),
   );
   DateTime endTime = DateTime.now();
   print("Decryption need : ${endTime.difference(startTime)}");

@@ -1,9 +1,9 @@
 import 'dart:convert';
 
-import 'package:end2end/managers/key_manager.dart';
+import 'package:end2end/crypto/managers/key_manager.dart';
 import 'package:http/http.dart' as http;
 
-const bool isMyUser = true;
+const bool isMyUser = false;
 
 const myId = isMyUser ? "userA" : "userB";
 const otherId = !isMyUser ? "userA" : "userB";

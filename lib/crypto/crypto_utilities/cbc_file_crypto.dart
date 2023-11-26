@@ -34,15 +34,15 @@ class CBCFileCrypto {
   encrypt({
     required File source,
     required File dest,
-    required String key,
-    required String iv,
+    required Uint8List key,
+    required Uint8List iv,
   }) async {
     final encryptor = CBCBlockCipher(AESEngine());
     encryptor.init(
       true,
       ParametersWithIV(
-        KeyParameter(Uint8List.fromList(key.codeUnits)),
-        Uint8List.fromList(iv.codeUnits),
+        KeyParameter(key),
+        iv,
       ),
     );
     final sorceFile = source.openSync();
@@ -112,15 +112,15 @@ class CBCFileCrypto {
   decrypt({
     required File source,
     required File dest,
-    required String key,
-    required String iv,
+    required Uint8List key,
+    required Uint8List iv,
   }) async {
     final decryptor = CBCBlockCipher(AESEngine());
     decryptor.init(
       false,
       ParametersWithIV(
-        KeyParameter(Uint8List.fromList(key.codeUnits)),
-        Uint8List.fromList(iv.codeUnits),
+        KeyParameter(key),
+        iv,
       ),
     );
 

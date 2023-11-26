@@ -1,3 +1,20 @@
-import 'package:end2end/crypto/storage_manager/adapters/hive_storage_adapter.dart';
+abstract class KeyStorage {
+  Future<void> init();
 
-class KeyStorage extends HiveAdapter {}
+  Future<void> store({
+    required String key,
+    required dynamic value,
+    String? partition,
+  });
+
+  Future retrieve({required String key, String? partition});
+
+  Future<Map> retriveAll({
+    required String key,
+    String? partition,
+  });
+
+  Future<void> remove({required String key, String? partition});
+
+  Future<bool> hasData({required String key, String? partition});
+}

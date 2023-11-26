@@ -2,12 +2,16 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:end2end/crypto/crypto_utilities/cbc_file_crypto.dart';
+import 'package:end2end/crypto/crypto_utilities/custom_group_cipher.dart';
+import 'package:end2end/crypto/storage_manager/adapters/hive_storage.dart';
+import 'package:end2end/crypto/storage_manager/stores/InDeviceSenderKeyStore.dart';
 import 'package:end2end/my_key_manager.dart';
 import 'package:libsignal_protocol_dart/libsignal_protocol_dart.dart';
 
 Future<void> installE2EE() async {
-  // groupTest();
-  // return;
+  await groupTest();
+  return;
   await myKeyManager.init();
   await myKeyManager.install();
 
@@ -144,17 +148,30 @@ sendMessages(String message) async {
 Future<void> groupTest() async {
   const alice = SignalProtocolAddress('+00000000001', 1);
   const groupSender = SenderKeyName('Private group', alice);
-  final aliceStore = InMemorySenderKeyStore();
-  final bobStore = InMemorySenderKeyStore();
-  final tomStore = InMemorySenderKeyStore();
+
+  final aliceS = HiveKeyStore(path: 'alice');
+  final bobS = HiveKeyStore(path: 'bob');
+  final tomS = HiveKeyStore(path: 'tom');
+  final mikeS = HiveKeyStore(path: 'mike');
+
+  final aliceStore = InDeviceSenderKeyStore(aliceS);
+  final bobStore = InDeviceSenderKeyStore(bobS);
+  final tomStore = InDeviceSenderKeyStore(tomS);
+  final mikeStore = InDeviceSenderKeyStore(mikeS);
+
+  // final aliceStore = InMemorySenderKeyStore();
+  // final bobStore = InMemorySenderKeyStore();
+  // final tomStore = InMemorySenderKeyStore();
 
   final aliceSessionBuilder = GroupSessionBuilder(aliceStore);
   final bobSessionBuilder = GroupSessionBuilder(bobStore);
   final tomSessionBuilder = GroupSessionBuilder(tomStore);
+  final mikeSessionBuilder = GroupSessionBuilder(mikeStore);
 
-  final aliceGroupCipher = GroupCipher(aliceStore, groupSender);
-  final bobGroupCipher = GroupCipher(bobStore, groupSender);
-  final tomGroupCipher = GroupCipher(tomStore, groupSender);
+  final aliceGroupCipher = CustomGroupCipher(aliceStore, groupSender);
+  final bobGroupCipher = CustomGroupCipher(bobStore, groupSender);
+  final tomGroupCipher = CustomGroupCipher(tomStore, groupSender);
+  final mikeGroupCipher = CustomGroupCipher(mikeStore, groupSender);
 
   final sentAliceDistributionMessage =
       await aliceSessionBuilder.create(groupSender);
@@ -174,12 +191,59 @@ Future<void> groupTest() async {
     receivedAliceDistributionMessage,
   );
 
-  final ciphertextFromAlice = await aliceGroupCipher
-      .encrypt(Uint8List.fromList(utf8.encode('Hello Mixin')));
-  final plaintextFromAlice = await bobGroupCipher.decrypt(ciphertextFromAlice);
-  final plaintextFromAliceForTom =
-      await tomGroupCipher.decrypt(ciphertextFromAlice);
-  // ignore: avoid_print
-  print(utf8.decode(plaintextFromAlice));
-  print(utf8.decode(plaintextFromAliceForTom));
+  await mikeSessionBuilder.process(
+    groupSender,
+    receivedAliceDistributionMessage,
+  );
+
+  final bobMsg = await aliceGroupCipher.encrypt(Uint8List.fromList(
+    utf8.encode(
+      "#include <stdio.h>\nint main() {\n\tprintf(\"Hello World 😎\");\n\treturn 0;\n}",
+    ),
+  ));
+
+  final cryptoInfo = await aliceGroupCipher.getFileEncryptionKeys();
+  cryptoInfo["fileName"] = fileName;
+
+  final myFile = File(fileName);
+  final encryptFilePath = "./encryption/$fileName.ase";
+  final encryptedFile = File(encryptFilePath)..createSync(recursive: true);
+
+  cryptoInfo["encryptFilePath"] = encryptFilePath;
+  final fileCrypto = CBCFileCrypto();
+  await fileCrypto.encrypt(
+    source: myFile,
+    dest: encryptedFile,
+    key: cryptoInfo["fileKey"],
+    iv: cryptoInfo["fileIV"],
+  );
+  final fileMsg = await aliceGroupCipher.encryptFileInfo(cryptoInfo);
+
+  final deMsg = await bobGroupCipher.decrypt(bobMsg);
+  final tomMsg = await tomGroupCipher.decrypt(bobMsg);
+  final mikeMsg = await mikeGroupCipher.decrypt(bobMsg);
+  final defileMsg = await mikeGroupCipher.decrypt(fileMsg);
+  print(utf8.decode(deMsg));
+  print(utf8.decode(tomMsg));
+  print(utf8.decode(mikeMsg));
+
+  final fileInfo = jsonDecode(utf8.decode(defileMsg));
+  print(fileInfo);
+
+  final decryptedFile = File("./decryption/${fileInfo["fileName"]}")
+    ..createSync(recursive: true);
+  await fileCrypto.decrypt(
+    source: File(fileInfo["encryptFilePath"]),
+    dest: decryptedFile,
+    key: parseBytes(fileInfo["fileKey"]),
+    iv: parseBytes(fileInfo["fileIV"]),
+  );
 }
+
+// const fileName = "jukto.jpg";
+// const fileName = "my_file.txt";
+const fileName = "WhatsApp Security Paper Analysis - Mit.pdf";
+
+  // const fileName = "Docker Desktop Installer.exe";
+  // const fileName = "VSCodeUserSetup-x64-1.54.1.exe";
+  // const fileName ="Extraction.2.2023.1080p.NF.WEB-DL.DDP5.1.Atmos.H.264-XEBEC.mkv";
