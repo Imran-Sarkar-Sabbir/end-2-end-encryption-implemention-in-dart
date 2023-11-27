@@ -7,15 +7,13 @@ class HiveKeyStore implements KeyStorage {
 
   @override
   Future<void> init() async {
-    Hive.init(path);
+    Hive.init("hive_storage");
   }
 
   @override
   Future retrieve({required String key, String? partition}) async {
-    await init();
     final box = await Hive.openBox(partition ?? key);
     final data = box.get(key);
-    await Hive.close();
     return data;
   }
 
@@ -24,10 +22,8 @@ class HiveKeyStore implements KeyStorage {
     required String key,
     String? partition,
   }) async {
-    await init();
     final box = await Hive.openBox(partition ?? key);
     final r = Map.fromIterables(box.keys, box.values);
-    await Hive.close();
     return r;
   }
 
@@ -37,26 +33,20 @@ class HiveKeyStore implements KeyStorage {
     required value,
     String? partition,
   }) async {
-    await init();
     final box = await Hive.openBox(partition ?? key);
     box.put(key, value);
-    await Hive.close();
   }
 
   @override
   Future<void> remove({required String key, String? partition}) async {
-    await init();
     final box = await Hive.openBox(partition ?? key);
     box.delete(key);
-    await Hive.close();
   }
 
   @override
   Future<bool> hasData({required String key, String? partition}) async {
-    await init();
     final box = await Hive.openBox(partition ?? key);
     final r = box.isNotEmpty;
-    await Hive.close();
     return r;
   }
 }

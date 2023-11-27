@@ -10,8 +10,8 @@ import 'package:end2end/my_key_manager.dart';
 import 'package:libsignal_protocol_dart/libsignal_protocol_dart.dart';
 
 Future<void> installE2EE() async {
-  await groupTest();
-  return;
+  // await groupTest();
+  // return;
   await myKeyManager.init();
   await myKeyManager.install();
 

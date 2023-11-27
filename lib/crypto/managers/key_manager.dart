@@ -28,7 +28,7 @@ class KeyManager {
   });
 
   Future<void> init() async {
-    // await keyStorage.init();
+    await keyStorage.init();
   }
 
   Future<void> install() async {
