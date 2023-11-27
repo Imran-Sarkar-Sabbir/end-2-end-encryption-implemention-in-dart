@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:encrypt/encrypt.dart';
 import 'package:libsignal_protocol_dart/libsignal_protocol_dart.dart';
+// ignore: implementation_imports
 import 'package:libsignal_protocol_dart/src/cbc.dart';
 
 class CustomGroupCipher extends GroupCipher {
@@ -17,12 +18,17 @@ class CustomGroupCipher extends GroupCipher {
     this.blobUploader,
   }) : super(_senderKeyStore, _senderKeyId);
 
-  Future<Map> getFileEncryptionKeys() async {
+  Future<Map> getFileEncryptionKeys({int fileCount = 1}) async {
+    assert(fileCount > 0, "fileCount should be greater than 0");
     final encryptionKeyInfo = await _extractFileEncryptionKey();
-    final key = SecureRandom(32);
-    final iv = SecureRandom(16);
-    encryptionKeyInfo["fileKey"] = key.bytes;
-    encryptionKeyInfo["fileIV"] = iv.bytes;
+    encryptionKeyInfo["files"] = [];
+    for (int i = 0; i < fileCount; i++) {
+      final fileKey = <String, dynamic>{
+        "key": SecureRandom(32).bytes,
+        "iv": SecureRandom(16).bytes,
+      };
+      encryptionKeyInfo["files"].add(fileKey);
+    }
     return encryptionKeyInfo;
   }
 
@@ -72,6 +78,4 @@ class CustomGroupCipher extends GroupCipher {
       throw NoSessionException(e.detailMessage);
     }
   }
-
-  encryptMessageData() {}
 }

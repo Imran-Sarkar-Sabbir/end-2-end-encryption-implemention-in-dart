@@ -203,20 +203,23 @@ Future<void> groupTest() async {
   ));
 
   final cryptoInfo = await aliceGroupCipher.getFileEncryptionKeys();
-  cryptoInfo["fileName"] = fileName;
 
   final myFile = File(fileName);
   final encryptFilePath = "./encryption/$fileName.ase";
   final encryptedFile = File(encryptFilePath)..createSync(recursive: true);
 
-  cryptoInfo["encryptFilePath"] = encryptFilePath;
   final fileCrypto = CBCFileCrypto();
-  await fileCrypto.encrypt(
-    source: myFile,
-    dest: encryptedFile,
-    key: cryptoInfo["fileKey"],
-    iv: cryptoInfo["fileIV"],
-  );
+  for (final fileKey in cryptoInfo["files"]) {
+    print(fileKey);
+    fileKey["encryptFilePath"] = encryptFilePath;
+    fileKey["fileName"] = fileName;
+    await fileCrypto.encrypt(
+      source: myFile,
+      dest: encryptedFile,
+      key: fileKey["key"],
+      iv: fileKey["iv"],
+    );
+  }
   final fileMsg = await aliceGroupCipher.encryptFileInfo(cryptoInfo);
 
   final deMsg = await bobGroupCipher.decrypt(bobMsg);
@@ -230,14 +233,16 @@ Future<void> groupTest() async {
   final fileInfo = jsonDecode(utf8.decode(defileMsg));
   print(fileInfo);
 
-  final decryptedFile = File("./decryption/${fileInfo["fileName"]}")
-    ..createSync(recursive: true);
-  await fileCrypto.decrypt(
-    source: File(fileInfo["encryptFilePath"]),
-    dest: decryptedFile,
-    key: parseBytes(fileInfo["fileKey"]),
-    iv: parseBytes(fileInfo["fileIV"]),
-  );
+  for (final file in fileInfo["files"]) {
+    final decryptedFile = File("./decryption/${file["fileName"]}")
+      ..createSync(recursive: true);
+    await fileCrypto.decrypt(
+      source: File(file["encryptFilePath"]),
+      dest: decryptedFile,
+      key: parseBytes(file["key"]),
+      iv: parseBytes(file["iv"]),
+    );
+  }
 }
 
 // const fileName = "jukto.jpg";
